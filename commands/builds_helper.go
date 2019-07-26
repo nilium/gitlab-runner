@@ -220,6 +220,17 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	defer b.lock.Unlock()
 
 	data := make(map[statePermutation]int)
+
+	// 'undefined' state will make the metric present always, even no
+	// builds are processed at the moment
+	undefinedState := statePermutation{
+		runner:        "undefined",
+		buildState:    "undefined",
+		buildStage:    "undefined",
+		executorStage: "undefined",
+	}
+	data[undefinedState] = 0
+
 	for _, build := range b.builds {
 		state := newStatePermutationFromBuild(build)
 		if _, ok := data[state]; ok {
@@ -228,6 +239,7 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 			data[state] = 1
 		}
 	}
+
 	return data
 }
 
