@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -68,7 +69,7 @@ func (r *RunSingleCommand) postBuild() {
 }
 
 func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) (err error) {
-	jobData, healthy := r.network.RequestJob(r.RunnerConfig, nil)
+	jobData, healthy := r.network.RequestJob(context.TODO(), r.RunnerConfig, nil)
 	if !healthy {
 		logrus.Println("Runner is not healthy!")
 		select {

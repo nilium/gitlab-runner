@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -475,7 +476,7 @@ func TestRequestJob(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res, ok := c.RequestJob(validToken, nil)
+	res, ok := c.RequestJob(context.Background(), validToken, nil)
 	if assert.NotNil(t, res) {
 		assert.NotEmpty(t, res.ID)
 	}
@@ -492,16 +493,16 @@ func TestRequestJob(t *testing.T) {
 	assert.Equal(t, "db-mysql", res.Services[1].Alias)
 
 	assert.Empty(t, c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should not be set")
-	res, ok = c.RequestJob(noJobsToken, nil)
+	res, ok = c.RequestJob(context.Background(), noJobsToken, nil)
 	assert.Nil(t, res)
 	assert.True(t, ok, "If no jobs, runner is healthy")
 	assert.Equal(t, "a nice timestamp", c.getLastUpdate(&noJobsToken.RunnerCredentials), "Last-Update should be set")
 
-	res, ok = c.RequestJob(invalidToken, nil)
+	res, ok = c.RequestJob(context.Background(), invalidToken, nil)
 	assert.Nil(t, res)
 	assert.False(t, ok, "If token is invalid, the runner is unhealthy")
 
-	res, ok = c.RequestJob(brokenConfig, nil)
+	res, ok = c.RequestJob(context.Background(), brokenConfig, nil)
 	assert.Nil(t, res)
 	assert.False(t, ok)
 }

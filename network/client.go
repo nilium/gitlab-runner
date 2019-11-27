@@ -2,6 +2,7 @@ package network
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -203,7 +204,7 @@ func (n *client) checkBackoffRequest(req *http.Request, res *http.Response) {
 	}
 }
 
-func (n *client) do(uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
+func (n *client) do(ctx context.Context, uri, method string, request io.Reader, requestType string, headers http.Header) (res *http.Response, err error) {
 	url, err := n.url.Parse(uri)
 	if err != nil {
 		return
@@ -226,16 +227,17 @@ func (n *client) do(uri, method string, request io.Reader, requestType string, h
 
 	n.ensureTLSConfig()
 
-	res, err = n.requester.Do(req)
+	res, err = n.requester.Do(req.WithContext(ctx))
 	if err != nil {
 		return
 	}
 
 	n.checkBackoffRequest(req, res)
+
 	return
 }
 
-func (n *client) doJSON(uri, method string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
+func (n *client) doJSON(ctx context.Context, uri, method string, statusCode int, request interface{}, response interface{}) (int, string, *http.Response) {
 	var body io.Reader
 
 	if request != nil {
@@ -251,7 +253,7 @@ func (n *client) doJSON(uri, method string, statusCode int, request interface{},
 		headers.Set("Accept", "application/json")
 	}
 
-	res, err := n.do(uri, method, body, "application/json", headers)
+	res, err := n.do(ctx, uri, method, body, "application/json", headers)
 	if err != nil {
 		return -1, err.Error(), nil
 	}
