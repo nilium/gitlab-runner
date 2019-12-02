@@ -30,6 +30,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
+const (
+	gracefulShutdownSignal = syscall.SIGQUIT
+)
+
 var (
 	concurrentDesc = prometheus.NewDesc(
 		"gitlab_runner_concurrent",
@@ -203,7 +207,7 @@ func (mr *RunCommand) run() {
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 
-	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(mr.stopSignals, gracefulShutdownSignal, syscall.SIGTERM, os.Interrupt, os.Kill)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
 	startWorker := make(chan int)
@@ -682,7 +686,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 // At the end it triggers the forceful shutdown, which handles the forceful the process termination.
 func (mr *RunCommand) Stop(_ service.Service) error {
 	if mr.stopSignal == nil {
-		mr.stopSignal = os.Interrupt
+		mr.stopSignal = gracefulShutdownSignal
 	}
 
 	go mr.interruptRun()
@@ -734,7 +738,7 @@ func (mr *RunCommand) interruptRun() {
 // signal - is received.
 func (mr *RunCommand) handleGracefulShutdown() error {
 	// We wait till we have a SIGQUIT
-	for mr.stopSignal == syscall.SIGQUIT {
+	for mr.stopSignal == gracefulShutdownSignal {
 		mr.log().
 			WithField("StopSignal", mr.stopSignal).
 			Warning("Starting graceful shutdown, waiting for builds to finish")
