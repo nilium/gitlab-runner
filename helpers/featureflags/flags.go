@@ -8,6 +8,7 @@ const (
 	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	UseLegacyBuildsDirForDocker          string = "FF_USE_LEGACY_BUILDS_DIR_FOR_DOCKER"
 	UseLegacyVolumesMountingOrder        string = "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER"
+	ShellExecutorUseLegacyProcessKill    string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
 )
 
 type FeatureFlag struct {
@@ -44,6 +45,13 @@ var flags = []FeatureFlag{
 		Deprecated:      true,
 		ToBeRemovedWith: "12.6",
 		Description:     "Disables the new ordering of volumes mounting when `docker*` executors are being used.",
+	},
+	{
+		Name:            ShellExecutorUseLegacyProcessKill,
+		DefaultValue:    "false",
+		Deprecated:      true,
+		ToBeRemovedWith: "13.0",
+		Description:     "Use the old process termination that was used prior to GitLab 12.8 where only `SIGKILL` was sent",
 	},
 }
 
