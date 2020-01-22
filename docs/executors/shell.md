@@ -75,5 +75,40 @@ the user's permissions (`gitlab-runner`) and can "steal" code from other
 projects that are run on this server. Use it only for running builds on a
 server you trust and own.
 
+## Terminating and killing processes
+
+GitLab Runner terminates any process under any of the following
+conditions:
+
+- The job [times out](https://docs.gitlab.com/ee/user/project/pipelines/settings.html#timeout).
+- The job is canceled.
+
+The shell executor starts the script for the job in a new process and on
+UNIX systems it sets the main process as a [process
+group](http://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
+
+### GitLab 12.7 or lower
+
+On UNIX it will send a `SIGKILL` to the process to terminate it since
+the child process belongs to the same process group this signal is also
+sent to them. Whilst on Windows it will send a `taskkill /F
+/T`.
+
+### GitLab 12.8 or higher
+
+On UNIX it will first send `SIGTERM` to the process and it's child
+processes, and after 10 minutes it will send `SIGKILL`. This allows
+graceful termination for the process. Windows don't have a `SIGTERM`
+equivalent so the kill process it sent twice, the second is sent after
+10 minutes.
+
+If for some reason this new termination process has problems with your
+scripts but works with the  [old method](#gitlab-127-or-lower) you can
+set the feature flag
+[`FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL`](../configuration/feature-flags.md)
+to `true`, and it will use the old method. Keep in mind that this
+feature flag will be removed in GitLab Runner 13.0 so you still need to
+fix your script to handle the new termination.
+
 [run]: ../commands/README.md#gitlab-runner-run
 [packages]: https://packages.gitlab.com/runner/gitlab-runner

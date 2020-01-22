@@ -66,6 +66,12 @@ func (b *BuildError) Error() string {
 	return b.Inner.Error()
 }
 
+func (b *BuildError) Is(err error) bool {
+	var e *BuildError
+
+	return errors.As(err, &e)
+}
+
 func MakeBuildError(format string, args ...interface{}) error {
 	return &BuildError{
 		Inner: fmt.Errorf(format, args...),
