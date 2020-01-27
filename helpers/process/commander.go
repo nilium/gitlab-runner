@@ -11,6 +11,7 @@ type Commander interface {
 	Start() error
 	Wait() error
 	Process() *os.Process
+	IsProcessGroup() bool
 }
 
 type CommandOptions struct {
@@ -44,6 +45,8 @@ func NewOSCmd(executable string, args []string, options CommandOptions) Commande
 }
 
 func (c *osCmd) Start() error {
+	setProcessGroup(c.internal)
+
 	return c.internal.Start()
 }
 
