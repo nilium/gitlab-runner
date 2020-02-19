@@ -22,7 +22,7 @@ RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:
 RUN Expand-Archive -Path git.zip -DestinationPath git
 RUN Expand-Archive -Path git-lfs.zip -DestinationPath git-lfs
 
-FROM mcr.microsoft.com/windows/servercore:1809_amd64
+FROM mcr.microsoft.com/powershell:6.2.3-windowsservercore-1809
 
 USER ContainerAdministrator
 
