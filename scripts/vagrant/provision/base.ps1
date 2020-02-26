@@ -1,4 +1,4 @@
-﻿$goVersion = "1.13.8"
+﻿$goVersion = "1.14.0"
 $gitVersion = "2.23.0"
 $srcFolder = "C:\GitLab-Runner"
 

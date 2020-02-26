@@ -6,7 +6,7 @@
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.14.0.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -15,21 +15,21 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 Using binary package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.13.8.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.14.0.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.13.8.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.14.0.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 
 ```shell
-pkg install go-1.13.8 gmake git mercurial
+pkg install go-1.14.0 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
@@ -100,7 +100,7 @@ make build_current
 
 `make build_current` is a superset of `make build_simple` which in addition
 takes care of building Docker dependencies.
-  
+
 ### Building the Docker images
 
 If you want to build the Docker images, run `make build_current_docker`, which will:
