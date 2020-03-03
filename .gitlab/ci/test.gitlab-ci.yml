@@ -1,6 +1,20 @@
 include:
-  - template: Security/SAST.gitlab-ci.yml
-  - template: Security/License-Scanning.gitlab-ci.yml
+- template: Security/Dependency-Scanning.gitlab-ci.yml
+- template: Security/SAST.gitlab-ci.yml
+- template: Security/License-Scanning.gitlab-ci.yml
+
+# Overriding 'Dependency-Scanning.gitlab-ci.yml' template, because
+# we need to replace the only:refs: rules with our own, the same
+# as in `.merge_request_pipelines` template.
+dependency_scanning:
+  # override services as we aren't using DinD
+  services: []
+  only:
+    refs:
+    - merge_requests
+    - master@gitlab-org/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
 
 # Overriding 'License-Scanning.gitlab-ci.yml' template, because
 # we need to replace the only:refs: rules with our own, the same
@@ -10,16 +24,20 @@ license_scanning:
     refs:
     - merge_requests
     - master@gitlab-org/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
     - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
 
 # Overriding 'SAST.gitlab-ci.yml' template, because
 # we need to replace the only:refs: rules with our own, the same
 # as in `.merge_request_pipelines` template.
 sast:
+  # override services as we aren't using DinD
+  services: []
   only:
     refs:
     - merge_requests
     - master@gitlab-org/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
     - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
 
 docs lint:
