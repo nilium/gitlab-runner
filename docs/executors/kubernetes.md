@@ -53,7 +53,7 @@ If you are running it externally to the Cluster then you will need to set each
 of these keywords and make sure that the Runner has access to the Kubernetes API
 on the cluster.
 
-## The keywords
+## The available runner config.toml keywords
 
 The following keywords help to define the behaviour of the Runner within Kubernetes:
 
