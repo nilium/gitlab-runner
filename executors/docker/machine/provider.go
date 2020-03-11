@@ -456,7 +456,7 @@ func (m *machineProvider) GetDefaultShell() string {
 
 func (m *machineProvider) Create() common.Executor {
 	return &machineExecutor{
-		provider: m,
+		machineProvider: m,
 	}
 }
 

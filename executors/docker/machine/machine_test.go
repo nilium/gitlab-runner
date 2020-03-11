@@ -103,7 +103,7 @@ func testMachineCredentialsUsage(t *testing.T, name string, runnerConfigSource f
 			Return(fakeExecutor).Once()
 
 		e := &machineExecutor{
-			provider: &machineProvider{
+			machineProvider: &machineProvider{
 				machine:          machine,
 				executorProvider: executorProvider,
 				totalActions: prometheus.NewCounterVec(
