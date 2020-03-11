@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type machineProvider struct {
@@ -438,6 +438,10 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 
 func (m *machineProvider) CanCreate() bool {
 	return m.provider.CanCreate()
+}
+
+func (m *machineProvider) createExecutor() common.Executor {
+	return m.provider.Create()
 }
 
 func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) error {

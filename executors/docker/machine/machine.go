@@ -2,6 +2,7 @@ package machine
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -29,18 +30,20 @@ type machineExecutor struct {
 func (e *machineExecutor) log() (log *logrus.Entry) {
 	log = e.build.Log()
 
-	details, _ := e.build.ExecutorData.(*machineDetails)
-	if details == nil {
-		details, _ = e.data.(*machineDetails)
+	machine, _ := e.build.ExecutorData.(*machineDetails)
+	if machine == nil {
+		machine, _ = e.data.(*machineDetails)
 	}
-	if details != nil {
+
+	if machine != nil {
 		log = log.WithFields(logrus.Fields{
-			"name":      details.Name,
-			"usedcount": details.UsedCount,
-			"created":   details.Created,
+			"name":      machine.Name,
+			"usedcount": machine.UsedCount,
+			"created":   machine.Created,
 			"now":       time.Now(),
 		})
 	}
+
 	if e.config.Docker != nil {
 		log = log.WithField("docker", e.config.Docker.Host)
 	}
@@ -55,44 +58,72 @@ func (e *machineExecutor) Shell() *common.ShellScriptInfo {
 	return e.executor.Shell()
 }
 
-func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err error) {
+func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.build = options.Build
 
+	err := e.selectMachineForBuild(&options)
+	if err != nil {
+		return fmt.Errorf("couldn't select machine for build: %w", err)
+	}
+
+	e.log().Infoln("Starting docker-machine build...")
+
+	err = e.createInnerExecutor()
+	if err != nil {
+		return fmt.Errorf("couldn't create inner executor: %w", err)
+	}
+
+	return e.executor.Prepare(options)
+}
+
+func (e *machineExecutor) selectMachineForBuild(options *common.ExecutorPrepareOptions) error {
 	if options.Config.Docker == nil {
 		options.Config.Docker = &common.DockerConfig{}
 	}
+
+	var err error
 
 	// Use the machine
 	e.SetCurrentStage(DockerMachineExecutorStageUseMachine)
 	e.config, e.data, err = e.provider.Use(options.Config, options.Build.ExecutorData)
 	if err != nil {
-		return err
+		return fmt.Errorf("couldn't select machine: %w", err)
 	}
+
+	// assign Docker Credentials from chosen machine
 	options.Config.Docker.DockerCredentials = e.config.Docker.DockerCredentials
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
 	e.build.ProjectRunnerID = 0
-	if details, _ := options.Build.ExecutorData.(*machineDetails); details != nil {
-		options.Build.Hostname = details.Name
-	} else if details, _ := e.data.(*machineDetails); details != nil {
-		options.Build.Hostname = details.Name
+
+	var machine *machineDetails
+
+	machine, _ = options.Build.ExecutorData.(*machineDetails)
+	if machine == nil {
+		machine, _ = e.data.(*machineDetails)
 	}
 
-	e.log().Infoln("Starting docker-machine build...")
+	if machine != nil {
+		options.Build.Hostname = machine.Name
+	}
 
-	// Create original executor
-	e.executor = e.provider.provider.Create()
+	return nil
+}
+
+func (e *machineExecutor) createInnerExecutor() error {
+	e.executor = e.provider.createExecutor()
 	if e.executor == nil {
 		return errors.New("failed to create an executor")
 	}
 
-	return e.executor.Prepare(options)
+	return nil
 }
 
 func (e *machineExecutor) Run(cmd common.ExecutorCommand) error {
 	if e.executor == nil {
 		return errors.New("missing executor")
 	}
+
 	return e.executor.Run(cmd)
 }
 
@@ -100,6 +131,7 @@ func (e *machineExecutor) Finish(err error) {
 	if e.executor != nil {
 		e.executor.Finish(err)
 	}
+
 	e.log().Infoln("Finished docker-machine build:", err)
 }
 
@@ -109,12 +141,14 @@ func (e *machineExecutor) Cleanup() {
 		e.executor.Cleanup()
 	}
 
-	// Release allocated machine
-	if e.data != nil {
-		e.SetCurrentStage(DockerMachineExecutorStageReleaseMachine)
-		e.provider.Release(&e.config, e.data)
-		e.data = nil
+	if e.data == nil {
+		return
 	}
+
+	// Release allocated machine
+	e.SetCurrentStage(DockerMachineExecutorStageReleaseMachine)
+	e.provider.Release(&e.config, e.data)
+	e.data = nil
 }
 
 func (e *machineExecutor) GetCurrentStage() common.ExecutorStage {
