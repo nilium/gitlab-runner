@@ -14,8 +14,8 @@ import (
 )
 
 type machineProvider struct {
-	name    string
-	details machinesDetails
+	name     string
+	machines machinesDetails
 
 	machineCommand docker_helpers.Machine
 
@@ -37,7 +37,7 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	details, ok := m.details[name]
+	details, ok := m.machines[name]
 	if !ok {
 		details = &machineDetails{
 			Name:      name,
@@ -47,7 +47,7 @@ func (m *machineProvider) machineDetails(name string, acquire bool) *machineDeta
 			UsedCount: 1, // any machine that we find we mark as already used
 			State:     machineStateIdle,
 		}
-		m.details[name] = details
+		m.machines[name] = details
 	}
 
 	if acquire {
@@ -196,7 +196,7 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	delete(m.details, details.Name)
+	delete(m.machines, details.Name)
 
 	details.logger().
 		WithField("now", time.Now()).
@@ -210,7 +210,7 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	details, _ := m.details[machineName]
+	details, _ := m.machines[machineName]
 	if details == nil {
 		return errors.New("machine not found")
 	}
@@ -302,7 +302,7 @@ func (m *machineProvider) intermediateMachineList(excludedMachines []string) []s
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	for _, details := range m.details {
+	for _, details := range m.machines {
 		if details.isPersistedOnDisk() {
 			continue
 		}
@@ -469,7 +469,7 @@ func newMachineProvider(name, executor string) *machineProvider {
 
 	return &machineProvider{
 		name:             name,
-		details:          make(machinesDetails),
+		machines:         make(machinesDetails),
 		machineCommand:   docker_helpers.NewMachineCommand(),
 		executorProvider: executorProvider,
 		totalActions: prometheus.NewCounterVec(
