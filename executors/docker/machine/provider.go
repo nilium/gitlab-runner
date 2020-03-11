@@ -443,10 +443,6 @@ func (m *machineProvider) CanCreate() bool {
 	return m.executorProvider.CanCreate()
 }
 
-func (m *machineProvider) createExecutor() common.Executor {
-	return m.executorProvider.Create()
-}
-
 func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) error {
 	return m.executorProvider.GetFeatures(features)
 }
@@ -457,7 +453,8 @@ func (m *machineProvider) GetDefaultShell() string {
 
 func (m *machineProvider) Create() common.Executor {
 	return &machineExecutor{
-		machineProvider: m,
+		machineProvider:  m,
+		executorProvider: m.executorProvider,
 	}
 }
 
