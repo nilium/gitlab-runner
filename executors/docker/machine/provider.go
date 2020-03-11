@@ -14,16 +14,16 @@ import (
 )
 
 type machineProvider struct {
-	name        string
-	machine     docker_helpers.Machine
-	details     machinesDetails
-	lock        sync.RWMutex
-	acquireLock sync.Mutex
+	name    string
+	machine docker_helpers.Machine
+	details machinesDetails
 
 	// executorProvider stores a the provider for the executor that
 	// will be used to run the builds
 	executorProvider common.ExecutorProvider
 
+	lock            sync.RWMutex
+	acquireLock     sync.Mutex
 	stuckRemoveLock sync.Mutex
 
 	// metrics
