@@ -86,7 +86,7 @@ func createMachineOffPeakIdleConfig(offPeakPeriod string) *common.RunnerConfig {
 	}
 }
 
-type testMachine struct {
+type testMachineCommand struct {
 	machines []string
 	second   bool
 
@@ -97,7 +97,7 @@ type testMachine struct {
 	mutex sync.Mutex
 }
 
-func (m *testMachine) Create(driver, name string, opts ...string) error {
+func (m *testMachineCommand) Create(driver, name string, opts ...string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -115,7 +115,7 @@ func (m *testMachine) Create(driver, name string, opts ...string) error {
 	return nil
 }
 
-func (m *testMachine) Provision(name string) error {
+func (m *testMachineCommand) Provision(name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -126,13 +126,13 @@ func (m *testMachine) Provision(name string) error {
 	return nil
 }
 
-func (m *testMachine) Stop(name string, timeout time.Duration) error {
+func (m *testMachineCommand) Stop(name string, timeout time.Duration) error {
 	m.Stopped <- true
 
 	return nil
 }
 
-func (m *testMachine) Remove(name string) error {
+func (m *testMachineCommand) Remove(name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -151,7 +151,7 @@ func (m *testMachine) Remove(name string) error {
 	return nil
 }
 
-func (m *testMachine) Exist(name string) bool {
+func (m *testMachineCommand) Exist(name string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -163,21 +163,21 @@ func (m *testMachine) Exist(name string) bool {
 	return false
 }
 
-func (m *testMachine) List() (machines []string, err error) {
+func (m *testMachineCommand) List() (machines []string, err error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	return m.machines, nil
 }
 
-func (m *testMachine) CanConnect(name string, skipCache bool) bool {
+func (m *testMachineCommand) CanConnect(name string, skipCache bool) bool {
 	if strings.Contains(name, "no-can-connect") {
 		return false
 	}
 	return true
 }
 
-func (m *testMachine) Credentials(name string) (dc docker_helpers.DockerCredentials, err error) {
+func (m *testMachineCommand) Credentials(name string) (dc docker_helpers.DockerCredentials, err error) {
 	if strings.Contains(name, "no-connect") {
 		err = errors.New("failed to connect")
 	}
@@ -242,16 +242,17 @@ func assertTotalMachines(t *testing.T, p *machineProvider, expected int, msgAndA
 	return false
 }
 
-func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
-	t := &testMachine{
+func testMachineProvider(machine ...string) (*machineProvider, *testMachineCommand) {
+	testMachineCommand := &testMachineCommand{
 		machines: machine,
 		Created:  make(chan bool, 10),
 		Removed:  make(chan bool, 10),
 		Stopped:  make(chan bool, 10),
 	}
 	p := newMachineProvider("docker+machine", "docker")
-	p.machine = t
-	return p, t
+	p.machineCommand = testMachineCommand
+
+	return p, testMachineCommand
 }
 
 func TestMachineDetails(t *testing.T) {

@@ -15,8 +15,9 @@ import (
 
 type machineProvider struct {
 	name    string
-	machine docker_helpers.Machine
 	details machinesDetails
+
+	machineCommand docker_helpers.Machine
 
 	// executorProvider stores a the provider for the executor that
 	// will be used to run the builds
@@ -71,14 +72,14 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	// Create machine asynchronously
 	go func() {
 		started := time.Now()
-		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
+		err := m.machineCommand.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 		for i := 0; i < 3 && err != nil; i++ {
 			details.RetryCount++
 			logrus.WithField("name", details.Name).
 				WithError(err).
 				Warningln("Machine creation failed, trying to provision")
 			time.Sleep(provisionRetryInterval)
-			err = m.machine.Provision(details.Name)
+			err = m.machineCommand.Provision(details.Name)
 		}
 
 		if err != nil {
@@ -114,7 +115,7 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 		}
 
 		// Check if node is running
-		canConnect := m.machine.CanConnect(name, skipCache)
+		canConnect := m.machineCommand.CanConnect(name, skipCache)
 		if !canConnect {
 			m.remove(name, "machine is unavailable")
 			continue
@@ -152,7 +153,7 @@ func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details 
 }
 
 func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
-	if !m.machine.Exist(details.Name) {
+	if !m.machineCommand.Exist(details.Name) {
 		details.logger().
 			Warningln("Skipping machine removal, because it doesn't exist")
 		return nil
@@ -166,7 +167,7 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 
 	details.logger().
 		Warningln("Stopping machine")
-	err = m.machine.Stop(details.Name, machineStopCommandTimeout)
+	err = m.machineCommand.Stop(details.Name, machineStopCommandTimeout)
 	if err != nil {
 		details.logger().
 			WithError(err).
@@ -175,7 +176,7 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 
 	details.logger().
 		Warningln("Removing machine")
-	err = m.machine.Remove(details.Name)
+	err = m.machineCommand.Remove(details.Name)
 	if err != nil {
 		details.RetryCount++
 		time.Sleep(removeRetryInterval)
@@ -325,7 +326,7 @@ func (m *machineProvider) intermediateMachineList(excludedMachines []string) []s
 }
 
 func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
-	machines, err = m.machine.List()
+	machines, err = m.machineCommand.List()
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +382,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.Exec
 func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
-	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name, true) {
+	if details == nil || !details.canBeUsed() || !m.machineCommand.CanConnect(details.Name, true) {
 		details, err = m.retryUseMachine(config)
 		if err != nil {
 			return
@@ -392,7 +393,7 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	}
 
 	// Get machine credentials
-	dc, err := m.machine.Credentials(details.Name)
+	dc, err := m.machineCommand.Credentials(details.Name)
 	if err != nil {
 		if newData != nil {
 			m.Release(config, newData)
@@ -469,7 +470,7 @@ func newMachineProvider(name, executor string) *machineProvider {
 	return &machineProvider{
 		name:             name,
 		details:          make(machinesDetails),
-		machine:          docker_helpers.NewMachineCommand(),
+		machineCommand:   docker_helpers.NewMachineCommand(),
 		executorProvider: executorProvider,
 		totalActions: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
