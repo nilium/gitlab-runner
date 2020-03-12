@@ -66,56 +66,73 @@ func (m *machineProvider) machineDetailsThreadUnsafe(name string) *machineDetail
 	return details
 }
 
+func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
+	name := newMachineName(config)
+
+	details := m.acquireMachineDetails(name)
+	details.create()
+
+	errCh := make(chan error, 1)
+	go m.asynchronouslyCreateMachine(config.Machine, state, details, errCh)
+
+	return details, errCh
+}
+
+func (m *machineProvider) asynchronouslyCreateMachine(config *common.DockerMachine, state machineState, details *machineDetails, errCh chan error) {
+	started := time.Now()
+
+	err := m.machineCommand.Create(config.MachineDriver, details.Name, config.MachineOptions...)
+	for i := 0; i < 3 && err != nil; i++ {
+		details.RetryCount++
+		details.logger().
+			WithError(err).
+			Warningln("Machine creation failed, trying to provision")
+
+		time.Sleep(provisionRetryInterval)
+
+		err = m.machineCommand.Provision(details.Name)
+	}
+
+	if err != nil {
+		details.logger().
+			WithField("time", time.Since(started)).
+			WithError(err).
+			Errorln("Machine creation failed, trying to remove")
+
+		removeErr := m.remove(details.Name, "Failed to create")
+		if removeErr != nil {
+			details.logger().
+				WithError(removeErr).
+				Errorln("Machine removal failed")
+		}
+
+		errCh <- err
+
+		return
+	}
+
+	details.State = state
+	details.Used = time.Now()
+
+	creationTime := time.Since(started)
+	m.creationHistogram.Observe(creationTime.Seconds())
+	m.totalActions.WithLabelValues("created").Inc()
+
+	details.logger().
+		WithFields(logrus.Fields{
+			"duration": creationTime,
+			"now":      time.Now(),
+		}).
+		Infoln("Machine created")
+
+	errCh <- nil
+}
+
 func (m *machineProvider) getMachineDetails(name string) *machineDetails {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	return m.machineDetailsThreadUnsafe(name)
-}
-
-func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (details *machineDetails, errCh chan error) {
-	name := newMachineName(config)
-	details = m.acquireMachineDetails(name)
-	details.State = machineStateCreating
-	details.UsedCount = 0
-	details.RetryCount = 0
-	details.LastSeen = time.Now()
-	errCh = make(chan error, 1)
-
-	// Create machine asynchronously
-	go func() {
-		started := time.Now()
-		err := m.machineCommand.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
-		for i := 0; i < 3 && err != nil; i++ {
-			details.RetryCount++
-			logrus.WithField("name", details.Name).
-				WithError(err).
-				Warningln("Machine creation failed, trying to provision")
-			time.Sleep(provisionRetryInterval)
-			err = m.machineCommand.Provision(details.Name)
-		}
-
-		if err != nil {
-			logrus.WithField("name", details.Name).
-				WithField("time", time.Since(started)).
-				WithError(err).
-				Errorln("Machine creation failed")
-			m.remove(details.Name, "Failed to create")
-		} else {
-			details.State = state
-			details.Used = time.Now()
-			creationTime := time.Since(started)
-			logrus.WithField("duration", creationTime).
-				WithField("name", details.Name).
-				WithField("now", time.Now()).
-				WithField("retries", details.RetryCount).
-				Infoln("Machine created")
-			m.totalActions.WithLabelValues("created").Inc()
-			m.creationHistogram.Observe(creationTime.Seconds())
-		}
-		errCh <- err
-	}()
-	return
 }
 
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
@@ -139,6 +156,18 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 	return nil
 }
 
+func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+	// Try to find a machine
+	for i := 0; i < 3; i++ {
+		details, err = m.useMachine(config)
+		if err == nil {
+			break
+		}
+		time.Sleep(provisionRetryInterval)
+	}
+	return
+}
+
 func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
 	machines, err := m.loadMachines(config)
 	if err != nil {
@@ -149,18 +178,6 @@ func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *mach
 		var errCh chan error
 		details, errCh = m.create(config, machineStateAcquired)
 		err = <-errCh
-	}
-	return
-}
-
-func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
-	// Try to find a machine
-	for i := 0; i < 3; i++ {
-		details, err = m.useMachine(config)
-		if err == nil {
-			break
-		}
-		time.Sleep(provisionRetryInterval)
 	}
 	return
 }
