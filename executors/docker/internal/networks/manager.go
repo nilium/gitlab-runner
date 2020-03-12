@@ -22,20 +22,27 @@ type Manager interface {
 }
 
 type manager struct {
-	logger debugLogger
-	client docker_helpers.Client
-	build  *common.Build
+	logger        debugLogger
+	client        docker_helpers.Client
+	build         *common.Build
+	networkLabels map[string]string
 
 	networkMode  container.NetworkMode
 	buildNetwork types.NetworkResource
 	perBuild     bool
 }
 
-func NewManager(logger debugLogger, dockerClient docker_helpers.Client, build *common.Build) Manager {
+func NewManager(
+	logger debugLogger,
+	dockerClient docker_helpers.Client,
+	build *common.Build,
+	networkLabels map[string]string,
+) Manager {
 	return &manager{
-		logger: logger,
-		client: dockerClient,
-		build:  build,
+		logger:        logger,
+		client:        dockerClient,
+		build:         build,
+		networkLabels: networkLabels,
 	}
 }
 
@@ -59,7 +66,12 @@ func (m *manager) Create(ctx context.Context, networkMode string) (container.Net
 
 	m.logger.Debugln("Creating build network ", networkName)
 
-	networkResponse, err := m.client.NetworkCreate(ctx, networkName, types.NetworkCreate{})
+	networkResponse, err := m.client.NetworkCreate(
+		ctx,
+		networkName,
+		types.NetworkCreate{
+			Labels: m.networkLabels,
+		})
 	if err != nil {
 		return "", err
 	}

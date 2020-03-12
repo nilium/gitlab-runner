@@ -52,6 +52,13 @@ const (
 	AuthConfigSourceNameJobPayload   = "job payload (GitLab Registry)"
 )
 
+const (
+	labelTypeKey     = "type="
+	labelCacheType   = "cache"
+	labelServiceType = "service"
+	labelWaitType    = "wait"
+)
+
 var DockerPrebuiltImagesPaths []string
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
@@ -354,7 +361,9 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	return image, nil
 }
 
-func (e *executor) getLabels(containerType string, otherLabels ...string) map[string]string {
+// Labels returns a map of labels to be applied to docker entities.
+// Currently containers and networks.
+func (e *executor) Labels(otherLabels ...string) map[string]string {
 	labels := make(map[string]string)
 	labels[dockerLabelPrefix+".job.id"] = strconv.Itoa(e.Build.ID)
 	labels[dockerLabelPrefix+".job.sha"] = e.Build.GitInfo.Sha
@@ -364,7 +373,6 @@ func (e *executor) getLabels(containerType string, otherLabels ...string) map[st
 	labels[dockerLabelPrefix+".pipeline.id"] = e.Build.GetAllVariables().Get("CI_PIPELINE_ID")
 	labels[dockerLabelPrefix+".runner.id"] = e.Build.Runner.ShortDescription()
 	labels[dockerLabelPrefix+".runner.local_id"] = strconv.Itoa(e.Build.RunnerID)
-	labels[dockerLabelPrefix+".type"] = containerType
 	for _, label := range otherLabels {
 		keyValue := strings.SplitN(label, "=", 2)
 		if len(keyValue) == 2 {
@@ -468,7 +476,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
-		Labels: e.getLabels("service", "service="+service, "service.version="+version),
+		Labels: e.Labels(e.typeLabel(labelServiceType), "service="+service, "service.version="+version),
 		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
 	}
 
@@ -509,6 +517,10 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func (e *executor) typeLabel(typeValue string) string {
+	return labelTypeKey + typeValue
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
@@ -716,7 +728,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Image:        image.ID,
 		Hostname:     hostname,
 		Cmd:          cmd,
-		Labels:       e.getLabels(containerType),
+		Labels:       e.Labels(e.typeLabel(containerType)),
 		Tty:          false,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -1301,7 +1313,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	config := &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,
-		Labels: e.getLabels("wait", "wait="+service.ID),
+		Labels: e.Labels(e.typeLabel(labelWaitType), "wait="+service.ID),
 		Env:    environment,
 	}
 	hostConfig := &container.HostConfig{

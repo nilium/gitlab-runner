@@ -25,7 +25,7 @@ func newDebugLoggerMock() *mockDebugLogger {
 func TestNewDefaultManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewManager(logger, nil, nil)
+	m := NewManager(logger, nil, nil, map[string]string{})
 	assert.IsType(t, &manager{}, m)
 }
 

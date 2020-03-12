@@ -14,7 +14,7 @@ import (
 type containerClient interface {
 	docker_helpers.Client
 
-	LabelContainer(container *container.Config, containerType string, otherLabels ...string)
+	ContainerLabels(containerType string, otherLabels ...string) map[string]string
 	WaitForContainer(id string) error
 	RemoveContainer(ctx context.Context, id string) error
 }
@@ -85,8 +85,8 @@ func (m *cacheContainerManager) createCacheContainer(containerName string, conta
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
+		Labels: m.containerClient.ContainerLabels("cache", "cache.dir="+containerPath),
 	}
-	m.containerClient.LabelContainer(config, "cache", "cache.dir="+containerPath)
 
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{

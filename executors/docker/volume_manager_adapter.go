@@ -2,8 +2,7 @@ package docker
 
 import (
 	"context"
-
-	"github.com/docker/docker/api/types/container"
+	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -15,8 +14,9 @@ type volumesManagerAdapter struct {
 	e *executor
 }
 
-func (a *volumesManagerAdapter) LabelContainer(container *container.Config, containerType string, otherLabels ...string) {
-	container.Labels = a.e.getLabels(containerType, otherLabels...)
+func (a *volumesManagerAdapter) ContainerLabels(containerType string, otherLabels ...string) map[string]string {
+	typeLabel := fmt.Sprintf("type=%s", containerType)
+	return a.e.Labels(append(otherLabels, typeLabel)...)
 }
 
 func (a *volumesManagerAdapter) WaitForContainer(id string) error {
