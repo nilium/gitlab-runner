@@ -307,7 +307,7 @@ func (m *machineProvider) createMachines(config *common.RunnerConfig, machinesCo
 	}
 }
 
-func (m *machineProvider) scheduleMachineCreation(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
+func (m *machineProvider) scheduleMachineCreation(config *common.RunnerConfig, state state) (*machineDetails, chan error) {
 	name := utils.NewMachineName(config)
 
 	machine := m.acquireMachineDetails(name)
@@ -333,7 +333,7 @@ func (m *machineProvider) acquireMachineDetails(name string) *machineDetails {
 	return machine
 }
 
-func (m *machineProvider) asynchronouslyCreateMachine(config *common.DockerMachine, state machineState, machine *machineDetails, errCh chan error) {
+func (m *machineProvider) asynchronouslyCreateMachine(config *common.DockerMachine, state state, machine *machineDetails, errCh chan error) {
 	started := time.Now()
 
 	err := m.machineCommand.Create(config.MachineDriver, machine.Name, config.MachineOptions...)
