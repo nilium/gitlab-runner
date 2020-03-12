@@ -33,18 +33,223 @@ type machineProvider struct {
 	creationHistogram prometheus.Histogram
 }
 
-func (m *machineProvider) acquireMachineDetails(name string) *machineDetails {
+func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
+	if config.Machine == nil || config.Machine.MachineName == "" {
+		err = fmt.Errorf("missing Machine options")
+		return
+	}
+
+	// Lock updating machines, because two Acquires can be run at the same time
+	m.acquireLock.Lock()
+	defer m.acquireLock.Unlock()
+
+	machines, err := m.loadMachines(config)
+	if err != nil {
+		return
+	}
+
+	// Update a list of currently configured machines
+	machinesData, validMachines := m.updateMachines(machines, config)
+
+	// Pre-create machines
+	m.createMachines(config, &machinesData)
+
+	logrus.WithFields(machinesData.Fields()).
+		WithField("runner", config.ShortDescription()).
+		WithField("minIdleCount", config.Machine.GetIdleCount()).
+		WithField("maxMachines", config.Limit).
+		WithField("time", time.Now()).
+		Debugln("Docker Machine Details")
+	machinesData.writeDebugInformation()
+
+	// Try to find a free machine
+	details := m.findFreeMachine(false, validMachines...)
+	if details != nil {
+		data = details
+		return
+	}
+
+	// If we have a free machines we can process a build
+	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
+		err = errors.New("no free machines that can process builds")
+	}
+	return
+}
+
+func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
+	machines, err = m.machineCommand.List()
+	if err != nil {
+		return nil, err
+	}
+
+	machines = append(machines, m.intermediateMachineList(machines)...)
+	machines = filterMachineList(machines, machineFilter(config))
+	return
+}
+
+// intermediateMachineList returns a list of machines that might not yet be
+// persisted on disk, these machines are the ones between being virtually
+// created, and `docker-machine create` getting executed we populate this data
+// set to overcome the race conditions related to not-full set of machines
+// returned by `docker-machine ls -q`
+func (m *machineProvider) intermediateMachineList(excludedMachines []string) []string {
+	var excludedSet map[string]struct{}
+	var intermediateMachines []string
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	details := m.machineDetailsThreadUnsafe(name)
-	if details.isUsed() {
+	for _, details := range m.machines {
+		if details.isPersistedOnDisk() {
+			continue
+		}
+
+		// lazy init set, as most of times we don't create new machines
+		if excludedSet == nil {
+			excludedSet = make(map[string]struct{}, len(excludedMachines))
+			for _, excludedMachine := range excludedMachines {
+				excludedSet[excludedMachine] = struct{}{}
+			}
+		}
+
+		if _, ok := excludedSet[details.Name]; ok {
+			continue
+		}
+
+		intermediateMachines = append(intermediateMachines, details.Name)
+	}
+
+	return intermediateMachines
+}
+
+func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData, validMachines []string) {
+	data.Runner = config.ShortDescription()
+	validMachines = make([]string, 0, len(machines))
+
+	for _, name := range machines {
+		details := m.getMachineDetails(name)
+		details.LastSeen = time.Now()
+
+		err := m.updateMachine(config, &data, details)
+		if err == nil {
+			validMachines = append(validMachines, name)
+		} else {
+			m.remove(details.Name, err)
+		}
+
+		data.Add(details)
+	}
+	return
+}
+
+func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
+	if details.State != machineStateIdle {
 		return nil
 	}
 
-	details.acquire()
+	if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+		// Limit number of builds
+		return errors.New("too many builds")
+	}
 
-	return details
+	if data.Total() >= config.Limit && config.Limit > 0 {
+		// Limit maximum number of machines
+		return errors.New("too many machines")
+	}
+
+	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.GetIdleTime()) {
+		if data.Idle >= config.Machine.GetIdleCount() {
+			// Remove machine that are way over the idle time
+			return errors.New("too many idle machines")
+		}
+	}
+	return nil
+}
+
+func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	details, _ := m.machines[machineName]
+	if details == nil {
+		return errors.New("machine not found")
+	}
+
+	details.Reason = fmt.Sprint(reason...)
+	details.State = machineStateRemoving
+	details.RetryCount = 0
+
+	details.logger().
+		WithField("now", time.Now()).
+		Warningln("Requesting machine removal")
+
+	details.Used = time.Now()
+	details.writeDebugInformation()
+
+	go m.finalizeRemoval(details)
+
+	return nil
+}
+
+func (m *machineProvider) finalizeRemoval(details *machineDetails) {
+	for {
+		err := m.removeMachine(details)
+		if err == nil {
+			break
+		}
+	}
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	delete(m.machines, details.Name)
+
+	details.logger().
+		WithField("now", time.Now()).
+		WithField("retries", details.RetryCount).
+		Infoln("Machine removed")
+
+	m.totalActions.WithLabelValues("removed").Inc()
+}
+
+func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
+	if !m.machineCommand.Exist(details.Name) {
+		details.logger().
+			Warningln("Skipping machine removal, because it doesn't exist")
+		return nil
+	}
+
+	// This code limits amount of removal of stuck machines to one machine per interval
+	if details.isStuckOnRemove() {
+		m.stuckRemoveLock.Lock()
+		defer m.stuckRemoveLock.Unlock()
+	}
+
+	details.logger().
+		Warningln("Stopping machine")
+	err = m.machineCommand.Stop(details.Name, machineStopCommandTimeout)
+	if err != nil {
+		details.logger().
+			WithError(err).
+			Warningln("Error while stopping machine")
+	}
+
+	details.logger().
+		Warningln("Removing machine")
+	err = m.machineCommand.Remove(details.Name)
+	if err != nil {
+		details.RetryCount++
+		time.Sleep(removeRetryInterval)
+		return err
+	}
+
+	return nil
+}
+
+func (m *machineProvider) getMachineDetails(name string) *machineDetails {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	return m.machineDetailsThreadUnsafe(name)
 }
 
 // thread-unsafe
@@ -66,6 +271,22 @@ func (m *machineProvider) machineDetailsThreadUnsafe(name string) *machineDetail
 	return details
 }
 
+func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
+	// Create a new machines and mark them as Idle
+	for {
+		if data.Available() >= config.Machine.GetIdleCount() {
+			// Limit maximum number of idle machines
+			break
+		}
+		if data.Total() >= config.Limit && config.Limit > 0 {
+			// Limit maximum number of machines
+			break
+		}
+		m.create(config, machineStateIdle)
+		data.Creating++
+	}
+}
+
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 
@@ -76,6 +297,20 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	go m.asynchronouslyCreateMachine(config.Machine, state, details, errCh)
 
 	return details, errCh
+}
+
+func (m *machineProvider) acquireMachineDetails(name string) *machineDetails {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	details := m.machineDetailsThreadUnsafe(name)
+	if details.isUsed() {
+		return nil
+	}
+
+	details.acquire()
+
+	return details
 }
 
 func (m *machineProvider) asynchronouslyCreateMachine(config *common.DockerMachine, state machineState, details *machineDetails, errCh chan error) {
@@ -128,13 +363,6 @@ func (m *machineProvider) asynchronouslyCreateMachine(config *common.DockerMachi
 	errCh <- nil
 }
 
-func (m *machineProvider) getMachineDetails(name string) *machineDetails {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	return m.machineDetailsThreadUnsafe(name)
-}
-
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
 	// Enumerate all machines in reverse order, to always take the newest machines first
 	for idx := range machines {
@@ -154,259 +382,6 @@ func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (d
 	}
 
 	return nil
-}
-
-func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
-	// Try to find a machine
-	for i := 0; i < 3; i++ {
-		details, err = m.useMachine(config)
-		if err == nil {
-			break
-		}
-		time.Sleep(provisionRetryInterval)
-	}
-	return
-}
-
-func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
-	machines, err := m.loadMachines(config)
-	if err != nil {
-		return
-	}
-	details = m.findFreeMachine(true, machines...)
-	if details == nil {
-		var errCh chan error
-		details, errCh = m.create(config, machineStateAcquired)
-		err = <-errCh
-	}
-	return
-}
-
-func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
-	if !m.machineCommand.Exist(details.Name) {
-		details.logger().
-			Warningln("Skipping machine removal, because it doesn't exist")
-		return nil
-	}
-
-	// This code limits amount of removal of stuck machines to one machine per interval
-	if details.isStuckOnRemove() {
-		m.stuckRemoveLock.Lock()
-		defer m.stuckRemoveLock.Unlock()
-	}
-
-	details.logger().
-		Warningln("Stopping machine")
-	err = m.machineCommand.Stop(details.Name, machineStopCommandTimeout)
-	if err != nil {
-		details.logger().
-			WithError(err).
-			Warningln("Error while stopping machine")
-	}
-
-	details.logger().
-		Warningln("Removing machine")
-	err = m.machineCommand.Remove(details.Name)
-	if err != nil {
-		details.RetryCount++
-		time.Sleep(removeRetryInterval)
-		return err
-	}
-
-	return nil
-}
-
-func (m *machineProvider) finalizeRemoval(details *machineDetails) {
-	for {
-		err := m.removeMachine(details)
-		if err == nil {
-			break
-		}
-	}
-
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	delete(m.machines, details.Name)
-
-	details.logger().
-		WithField("now", time.Now()).
-		WithField("retries", details.RetryCount).
-		Infoln("Machine removed")
-
-	m.totalActions.WithLabelValues("removed").Inc()
-}
-
-func (m *machineProvider) remove(machineName string, reason ...interface{}) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	details, _ := m.machines[machineName]
-	if details == nil {
-		return errors.New("machine not found")
-	}
-
-	details.Reason = fmt.Sprint(reason...)
-	details.State = machineStateRemoving
-	details.RetryCount = 0
-
-	details.logger().
-		WithField("now", time.Now()).
-		Warningln("Requesting machine removal")
-
-	details.Used = time.Now()
-	details.writeDebugInformation()
-
-	go m.finalizeRemoval(details)
-	return nil
-}
-
-func (m *machineProvider) updateMachine(config *common.RunnerConfig, data *machinesData, details *machineDetails) error {
-	if details.State != machineStateIdle {
-		return nil
-	}
-
-	if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
-		// Limit number of builds
-		return errors.New("too many builds")
-	}
-
-	if data.Total() >= config.Limit && config.Limit > 0 {
-		// Limit maximum number of machines
-		return errors.New("too many machines")
-	}
-
-	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.GetIdleTime()) {
-		if data.Idle >= config.Machine.GetIdleCount() {
-			// Remove machine that are way over the idle time
-			return errors.New("too many idle machines")
-		}
-	}
-	return nil
-}
-
-func (m *machineProvider) updateMachines(machines []string, config *common.RunnerConfig) (data machinesData, validMachines []string) {
-	data.Runner = config.ShortDescription()
-	validMachines = make([]string, 0, len(machines))
-
-	for _, name := range machines {
-		details := m.getMachineDetails(name)
-		details.LastSeen = time.Now()
-
-		err := m.updateMachine(config, &data, details)
-		if err == nil {
-			validMachines = append(validMachines, name)
-		} else {
-			m.remove(details.Name, err)
-		}
-
-		data.Add(details)
-	}
-	return
-}
-
-func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
-	// Create a new machines and mark them as Idle
-	for {
-		if data.Available() >= config.Machine.GetIdleCount() {
-			// Limit maximum number of idle machines
-			break
-		}
-		if data.Total() >= config.Limit && config.Limit > 0 {
-			// Limit maximum number of machines
-			break
-		}
-		m.create(config, machineStateIdle)
-		data.Creating++
-	}
-}
-
-// intermediateMachineList returns a list of machines that might not yet be
-// persisted on disk, these machines are the ones between being virtually
-// created, and `docker-machine create` getting executed we populate this data
-// set to overcome the race conditions related to not-full set of machines
-// returned by `docker-machine ls -q`
-func (m *machineProvider) intermediateMachineList(excludedMachines []string) []string {
-	var excludedSet map[string]struct{}
-	var intermediateMachines []string
-
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	for _, details := range m.machines {
-		if details.isPersistedOnDisk() {
-			continue
-		}
-
-		// lazy init set, as most of times we don't create new machines
-		if excludedSet == nil {
-			excludedSet = make(map[string]struct{}, len(excludedMachines))
-			for _, excludedMachine := range excludedMachines {
-				excludedSet[excludedMachine] = struct{}{}
-			}
-		}
-
-		if _, ok := excludedSet[details.Name]; ok {
-			continue
-		}
-
-		intermediateMachines = append(intermediateMachines, details.Name)
-	}
-
-	return intermediateMachines
-}
-
-func (m *machineProvider) loadMachines(config *common.RunnerConfig) (machines []string, err error) {
-	machines, err = m.machineCommand.List()
-	if err != nil {
-		return nil, err
-	}
-
-	machines = append(machines, m.intermediateMachineList(machines)...)
-	machines = filterMachineList(machines, machineFilter(config))
-	return
-}
-
-func (m *machineProvider) Acquire(config *common.RunnerConfig) (data common.ExecutorData, err error) {
-	if config.Machine == nil || config.Machine.MachineName == "" {
-		err = fmt.Errorf("missing Machine options")
-		return
-	}
-
-	// Lock updating machines, because two Acquires can be run at the same time
-	m.acquireLock.Lock()
-	defer m.acquireLock.Unlock()
-
-	machines, err := m.loadMachines(config)
-	if err != nil {
-		return
-	}
-
-	// Update a list of currently configured machines
-	machinesData, validMachines := m.updateMachines(machines, config)
-
-	// Pre-create machines
-	m.createMachines(config, &machinesData)
-
-	logrus.WithFields(machinesData.Fields()).
-		WithField("runner", config.ShortDescription()).
-		WithField("minIdleCount", config.Machine.GetIdleCount()).
-		WithField("maxMachines", config.Limit).
-		WithField("time", time.Now()).
-		Debugln("Docker Machine Details")
-	machinesData.writeDebugInformation()
-
-	// Try to find a free machine
-	details := m.findFreeMachine(false, validMachines...)
-	if details != nil {
-		data = details
-		return
-	}
-
-	// If we have a free machines we can process a build
-	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
-		err = errors.New("no free machines that can process builds")
-	}
-	return
 }
 
 func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorData) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
@@ -445,6 +420,32 @@ func (m *machineProvider) Use(config *common.RunnerConfig, data common.ExecutorD
 	details.Used = time.Now()
 	details.UsedCount++
 	m.totalActions.WithLabelValues("used").Inc()
+	return
+}
+
+func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+	// Try to find a machine
+	for i := 0; i < 3; i++ {
+		details, err = m.useMachine(config)
+		if err == nil {
+			break
+		}
+		time.Sleep(provisionRetryInterval)
+	}
+	return
+}
+
+func (m *machineProvider) useMachine(config *common.RunnerConfig) (details *machineDetails, err error) {
+	machines, err := m.loadMachines(config)
+	if err != nil {
+		return
+	}
+	details = m.findFreeMachine(true, machines...)
+	if details == nil {
+		var errCh chan error
+		details, errCh = m.create(config, machineStateAcquired)
+		err = <-errCh
+	}
 	return
 }
 
