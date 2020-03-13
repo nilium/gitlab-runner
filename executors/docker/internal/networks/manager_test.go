@@ -15,6 +15,11 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
+var testLabels = map[string]string{
+	"label1": "value1",
+	"label2": "value2",
+}
+
 func newDebugLoggerMock() *mockDebugLogger {
 	loggerMock := new(mockDebugLogger)
 	loggerMock.On("Debugln", mock.Anything, mock.Anything)
@@ -41,6 +46,7 @@ func newDefaultManager() *manager {
 				},
 			},
 		},
+		networkLabels: testLabels,
 	}
 	return m
 }
@@ -81,7 +87,14 @@ func TestCreateNetwork(t *testing.T) {
 			networkPerBuild:     "true",
 			expectedNetworkMode: container.NetworkMode("runner--project-0-concurrent-0-job-0-network"),
 			clientAssertions: func(mc *docker_helpers.MockClient) {
-				mc.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+				mc.On(
+					"NetworkCreate",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+					types.NetworkCreate{
+						Labels: testLabels,
+					},
+				).
 					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
 					Once()
 				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
