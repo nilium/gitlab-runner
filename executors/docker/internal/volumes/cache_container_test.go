@@ -3,7 +3,6 @@ package volumes
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -172,7 +171,8 @@ func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 				return config.Cmd[0] == expectedCacheCmd[0]
 			})
 
-			cClient.On("LabelContainer", configMatcher, "cache", fmt.Sprintf("cache.dir=%s", containerPath)).
+			cClient.On("ContainerLabels", "cache", "cache.dir="+containerPath).
+				Return(map[string]string{}).
 				Once()
 
 			cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
