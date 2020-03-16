@@ -2210,7 +2210,7 @@ func TestLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.other.label2":    "2",
 	}
 
-	actual := e.Labels("other.label1=1", "other.label2=2")
+	actual := e.labels("other.label1=1", "other.label2=2")
 
 	assert.Equal(t, expected, actual)
 }
