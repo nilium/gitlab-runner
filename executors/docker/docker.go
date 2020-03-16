@@ -361,9 +361,9 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	return image, nil
 }
 
-// Labels returns a map of labels to be applied to docker entities.
+// labels returns a map of labels to be applied to docker entities.
 // Currently containers and networks.
-func (e *executor) Labels(otherLabels ...string) map[string]string {
+func (e *executor) labels(otherLabels ...string) map[string]string {
 	labels := map[string]string{
 		dockerLabelPrefix + ".job.id":          strconv.Itoa(e.Build.ID),
 		dockerLabelPrefix + ".job.sha":         e.Build.GitInfo.Sha,
@@ -477,7 +477,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
-		Labels: e.Labels(e.containerTypeLabel(labelServiceType), "service="+service, "service.version="+version),
+		Labels: e.labels(e.containerTypeLabel(labelServiceType), "service="+service, "service.version="+version),
 		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
 	}
 
@@ -729,7 +729,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Image:        image.ID,
 		Hostname:     hostname,
 		Cmd:          cmd,
-		Labels:       e.Labels(e.containerTypeLabel(containerType)),
+		Labels:       e.labels(e.containerTypeLabel(containerType)),
 		Tty:          false,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -1314,7 +1314,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	config := &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,
-		Labels: e.Labels(e.containerTypeLabel(labelWaitType), "wait="+service.ID),
+		Labels: e.labels(e.containerTypeLabel(labelWaitType), "wait="+service.ID),
 		Env:    environment,
 	}
 	hostConfig := &container.HostConfig{

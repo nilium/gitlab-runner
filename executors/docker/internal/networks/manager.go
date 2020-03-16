@@ -66,12 +66,7 @@ func (m *manager) Create(ctx context.Context, networkMode string) (container.Net
 
 	m.logger.Debugln("Creating build network ", networkName)
 
-	networkResponse, err := m.client.NetworkCreate(
-		ctx,
-		networkName,
-		types.NetworkCreate{
-			Labels: m.networkLabels,
-		})
+	networkResponse, err := m.client.NetworkCreate(ctx, networkName, types.NetworkCreate{Labels: m.networkLabels})
 	if err != nil {
 		return "", err
 	}

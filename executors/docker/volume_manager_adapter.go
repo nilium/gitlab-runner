@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -15,8 +14,8 @@ type volumesManagerAdapter struct {
 }
 
 func (a *volumesManagerAdapter) ContainerLabels(containerType string, otherLabels ...string) map[string]string {
-	typeLabel := fmt.Sprintf("type=%s", containerType)
-	return a.e.Labels(append(otherLabels, typeLabel)...)
+	typeLabel := a.e.containerTypeLabel(containerType)
+	return a.e.labels(append(otherLabels, typeLabel)...)
 }
 
 func (a *volumesManagerAdapter) WaitForContainer(id string) error {
