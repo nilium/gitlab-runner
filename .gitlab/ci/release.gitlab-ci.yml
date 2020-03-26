@@ -26,8 +26,8 @@
     GIT_256_CHECKSUM: "bd91db55bd95eaa80687df28877e2df8c8858a0266e9c67331cfddba2735f25c"
     GIT_LFS_256_CHECKSUM: "5c12db9728b53cba23e5f58f4a53d88cb2132e82fa1de0f8a79ce9d112e4d396"
   needs:
-  - 'helper images'
-  - 'binaries windows/386 windows/amd64'
+  - 'sign_helper images'
+  - 'sign_binaries windows/386 windows/amd64'
   before_script:
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
@@ -45,12 +45,12 @@
   extends:
   - .release
   needs:
-  - 'helper images'
+  - 'sign_helper images'
   - 'test coverage report'
   - 'binaries darwin/386 darwin/amd64'
   - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64'
-  - 'binaries windows/386 windows/amd64'
+  - 'sign_binaries windows/386 windows/amd64'
   - 'package-deb'
   - 'package-rpm'
   before_script:
