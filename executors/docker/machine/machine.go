@@ -68,7 +68,7 @@ func (e *machineExecutor) Prepare(options common.ExecutorPrepareOptions) (err er
 	if err != nil {
 		return err
 	}
-	options.Config.Docker.DockerCredentials = e.config.Docker.DockerCredentials
+	options.Config.Docker.Credentials = e.config.Docker.Credentials
 
 	// TODO: Currently the docker-machine doesn't support multiple builds
 	e.build.ProjectRunnerID = 0
@@ -144,6 +144,6 @@ func (e *machineExecutor) GetMetricsSelector() string {
 }
 
 func init() {
-	common.RegisterExecutor("docker+machine", newMachineProvider("docker+machine", "docker"))
-	common.RegisterExecutor("docker-ssh+machine", newMachineProvider("docker-ssh+machine", "docker-ssh"))
+	common.RegisterExecutorProvider("docker+machine", newMachineProvider("docker+machine", "docker"))
+	common.RegisterExecutorProvider("docker-ssh+machine", newMachineProvider("docker-ssh+machine", "docker-ssh"))
 }

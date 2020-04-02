@@ -1,12 +1,12 @@
 ---
-last_updated: 2017-10-09
+last_updated: 2020-03-27
 ---
 
 # Install GitLab Runner on Windows
 
 To install and run GitLab Runner on Windows you need:
 
-- Git installed.
+- Git, which can be installed from the [official site](https://git-scm.com/download/win)
 - A password for your user account, if you want to run it under your user
   account rather than the Built-in System Account.
 
@@ -151,7 +151,7 @@ is released in the [Long-Term Servicing Channel
 
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
-month of the official Microsoft release date.  Refer to the [Windows
+month of the official Microsoft release date. Refer to the [Windows
 Server current versions by servicing option
 list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.

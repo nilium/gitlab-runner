@@ -73,9 +73,9 @@ Docker executor:
   Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
 
-  - [`builds_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`cache_dir`](../configuration/advanced-configuration.html#the-runners-section)
-  - [`volumes`](../configuration/advanced-configuration.html#volumes-in-the-runnersdocker-section)
+  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
 
   This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
   However, if the destination path is on the `c:` drive, paths are also supported
@@ -242,7 +242,8 @@ Docker networks may conflict with other networks on the host, including other Do
 if the CIDR ranges are already in use. The default Docker address pool can be configured
 via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
 
-The mode is activated via the `FF_NETWORK_PER_BUILD` [feature flag](../configuration/feature-flags.md).
+To enable this mode you need to enable the [`FF_NETWORK_PER_BUILD`
+feature flag](../configuration/feature-flags.md).
 
 When a job starts, a bridge network is created (similarly to `docker
 network create <network>`). Upon creation, the service container(s) and the

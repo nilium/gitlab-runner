@@ -23,7 +23,6 @@ import (
 	"github.com/kardianos/osext"
 	"github.com/mattn/go-zglob"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -32,7 +31,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
-	docker_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -69,7 +69,7 @@ var errNetworksManagerUndefined = errors.New("networksManager is undefined")
 
 type executor struct {
 	executors.AbstractExecutor
-	client       docker_helpers.Client
+	client       docker.Client
 	volumeParser parser.Parser
 	info         types.Info
 
@@ -115,13 +115,13 @@ func (e *executor) getUserAuthConfiguration(indexName string) (string, *types.Au
 	}
 
 	buf := bytes.NewBufferString(e.Build.GetDockerAuthConfig())
-	authConfigs, _ := docker_helpers.ReadAuthConfigsFromReader(buf)
+	authConfigs, _ := docker.ReadAuthConfigsFromReader(buf)
 
 	if authConfigs == nil {
 		return "", nil
 	}
 
-	return AuthConfigSourceNameUserVariable, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	return AuthConfigSourceNameUserVariable, docker.ResolveDockerAuthConfig(indexName, authConfigs)
 }
 
 func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.AuthConfig) {
@@ -143,23 +143,23 @@ func (e *executor) getBuildAuthConfiguration(indexName string) (string, *types.A
 		}
 	}
 
-	return AuthConfigSourceNameJobPayload, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	return AuthConfigSourceNameJobPayload, docker.ResolveDockerAuthConfig(indexName, authConfigs)
 }
 
 func (e *executor) getHomeDirAuthConfiguration(indexName string) (string, *types.AuthConfig) {
-	sourceFile, authConfigs, _ := docker_helpers.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
+	sourceFile, authConfigs, _ := docker.ReadDockerAuthConfigsFromHomeDir(e.Shell().User)
 
 	if authConfigs == nil {
 		return "", nil
 	}
-	return sourceFile, docker_helpers.ResolveDockerAuthConfig(indexName, authConfigs)
+	return sourceFile, docker.ResolveDockerAuthConfig(indexName, authConfigs)
 
 }
 
 type authConfigResolver func(indexName string) (string, *types.AuthConfig)
 
 func (e *executor) getAuthConfig(imageName string) *types.AuthConfig {
-	indexName, _ := docker_helpers.SplitDockerImageName(imageName)
+	indexName, _ := docker.SplitDockerImageName(imageName)
 
 	resolvers := []authConfigResolver{
 		e.getUserAuthConfiguration,
@@ -196,7 +196,7 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 
 	options := types.ImagePullOptions{}
 	if ac != nil {
-		options.RegistryAuth, _ = docker_helpers.EncodeAuthConfig(ac)
+		options.RegistryAuth, _ = docker.EncodeAuthConfig(ac)
 	}
 
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
@@ -842,7 +842,7 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 	for ctx.Err() == nil {
 		container, err := e.client.ContainerInspect(ctx, id)
 		if err != nil {
-			if docker_helpers.IsErrNotFound(err) {
+			if docker.IsErrNotFound(err) {
 				return err
 			}
 
@@ -947,11 +947,11 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 	return err
 }
 
-func (e *executor) disconnectNetwork(ctx context.Context, id string) error {
+func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 	netList, err := e.client.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
 		e.Debugln("Can't get network list. ListNetworks exited with", err)
-		return err
+		return
 	}
 
 	for _, network := range netList {
@@ -967,7 +967,7 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) error {
 			}
 		}
 	}
-	return err
+	return
 }
 
 func (e *executor) verifyAllowedImage(image, optionName string, allowedImages []string, internalImages []string) error {
@@ -1031,7 +1031,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 }
 
 func (e *executor) connectDocker() error {
-	client, err := docker_helpers.New(e.Config.Docker.DockerCredentials, "")
+	client, err := docker.New(e.Config.Docker.Credentials, "")
 	if err != nil {
 		return err
 	}
