@@ -464,7 +464,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	containerName := fmt.Sprintf("%s-%s-%d", e.Build.ProjectUniqueName(), serviceSlug, serviceIndex)
 
 	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
+	_ = e.removeContainer(e.Context, containerName)
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
@@ -524,7 +524,7 @@ func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
 }
 
 func (e *executor) getServicesDefinitions() (common.Services, error) {
-	internalServiceImages := []string{}
+	internalServiceImages := make([]string, 0)
 	serviceDefinitions := common.Services{}
 
 	for _, service := range e.Config.Docker.Services {
@@ -559,7 +559,7 @@ func (e *executor) waitForServices() {
 		for _, service := range e.services {
 			wg.Add(1)
 			go func(service *types.Container) {
-				e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
+				_ = e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
 				wg.Done()
 			}(service)
 		}
@@ -580,8 +580,8 @@ func (e *executor) buildServiceLinks(linksMap map[string]*types.Container) (link
 	return
 }
 
-func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) (err error) {
-	var container *types.Container
+func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefinition common.Image, linksMap map[string]*types.Container) error {
+	var ctr *types.Container
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
 
@@ -596,19 +596,21 @@ func (e *executor) createFromServiceDefinition(serviceIndex int, serviceDefiniti
 		}
 
 		// Create service if not yet created
-		if container == nil {
-			container, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
+		if ctr == nil {
+			var err error
+			ctr, err = e.createService(serviceIndex, serviceMeta.Service, serviceMeta.Version, serviceMeta.ImageName, serviceDefinition, serviceMeta.Aliases)
 			if err != nil {
-				return
+				return err
 			}
 
-			e.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
-			e.services = append(e.services, container)
-			e.temporary = append(e.temporary, container.ID)
+			e.Debugln("Created service", serviceDefinition.Name, "as", ctr.ID)
+			e.services = append(e.services, ctr)
+			e.temporary = append(e.temporary, ctr.ID)
 		}
-		linksMap[linkName] = container
+		linksMap[linkName] = ctr
 	}
-	return
+
+	return nil
 }
 
 func (e *executor) createBuildNetwork() error {
@@ -683,9 +685,9 @@ func (e *executor) createServices() (err error) {
 func (e *executor) getValidContainers(containers []string) []string {
 	var newContainers []string
 
-	for _, container := range containers {
-		if _, err := e.client.ContainerInspect(e.Context, container); err == nil {
-			newContainers = append(newContainers, container)
+	for _, ctr := range containers {
+		if _, err := e.client.ContainerInspect(e.Context, ctr); err == nil {
+			newContainers = append(newContainers, ctr)
 		}
 	}
 
@@ -781,7 +783,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 	networkConfig := e.networkConfig(aliases)
 
 	// this will fail potentially some builds if there's name collision
-	e.removeContainer(e.Context, containerName)
+	_ = e.removeContainer(e.Context, containerName)
 
 	e.Debugln("Creating container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
@@ -803,17 +805,21 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 	return &inspect, nil
 }
 
-func (e *executor) killContainer(id string, waitCh chan error) (err error) {
+func (e *executor) killContainer(id string, waitCh chan error) error {
 	for {
 		e.disconnectNetwork(e.Context, id)
-		e.Debugln("Killing container", id, "...")
-		e.client.ContainerKill(e.Context, id, "SIGKILL")
 
-		// Wait for signal that container were killed
+		e.Debugln("Killing container", id, "...")
+		err := e.client.ContainerKill(e.Context, id, "SIGKILL")
+		if err != nil {
+			e.Warningln(fmt.Sprintf("Container kill exited with: %v", err))
+		}
+
+		// Wait for signal that container was killed
 		// or retry after some time
 		select {
 		case err = <-waitCh:
-			return
+			return err
 
 		case <-time.After(time.Second):
 		}
@@ -827,7 +833,7 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 
 	// Use active wait
 	for ctx.Err() == nil {
-		container, err := e.client.ContainerInspect(ctx, id)
+		ctr, err := e.client.ContainerInspect(ctx, id)
 		if err != nil {
 			if docker.IsErrNotFound(err) {
 				return err
@@ -845,14 +851,14 @@ func (e *executor) waitForContainer(ctx context.Context, id string) error {
 		// Reset retry timer
 		retries = 0
 
-		if container.State.Running {
+		if ctr.State.Running {
 			time.Sleep(time.Second)
 			continue
 		}
 
-		if container.State.ExitCode != 0 {
+		if ctr.State.ExitCode != 0 {
 			return &common.BuildError{
-				Inner: fmt.Errorf("exit code %d", container.State.ExitCode),
+				Inner: fmt.Errorf("exit code %d", ctr.State.ExitCode),
 			}
 		}
 
@@ -897,7 +903,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	// Write the input to the container and close its STDIN to get it to finish
 	go func() {
 		_, err := io.Copy(hijacked.Conn, input)
-		hijacked.CloseWrite()
+		_ = hijacked.CloseWrite()
 		if err != nil {
 			attachCh <- err
 		}
@@ -910,11 +916,11 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 
 	select {
 	case <-ctx.Done():
-		e.killContainer(id, waitCh)
+		_ = e.killContainer(id, waitCh)
 		err = errors.New("aborted")
 
 	case err = <-attachCh:
-		e.killContainer(id, waitCh)
+		_ = e.killContainer(id, waitCh)
 		e.Debugln("Container", id, "finished with", err)
 
 	case err = <-waitCh:
@@ -941,19 +947,20 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 		return
 	}
 
-	for _, network := range netList {
-		for _, pluggedContainer := range network.Containers {
+	for _, net := range netList {
+		for _, pluggedContainer := range net.Containers {
 			if id == pluggedContainer.Name {
-				err = e.client.NetworkDisconnect(ctx, network.ID, id, true)
+				err = e.client.NetworkDisconnect(ctx, net.ID, id, true)
 				if err != nil {
-					e.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", network.Name, "->", err)
+					e.Warningln("Can't disconnect possibly zombie container", pluggedContainer.Name, "from network", net.Name, "->", err)
 				} else {
-					e.Warningln("Possibly zombie container", pluggedContainer.Name, "is disconnected from network", network.Name)
+					e.Warningln("Possibly zombie container", pluggedContainer.Name, "is disconnected from network", net.Name)
 				}
 				break
 			}
 		}
 	}
+
 	return
 }
 
@@ -1238,7 +1245,7 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			e.removeContainer(ctx, id)
+			_ = e.removeContainer(ctx, id)
 			wg.Done()
 		}()
 	}
@@ -1264,7 +1271,7 @@ func (e *executor) Cleanup() {
 	}
 
 	if e.client != nil {
-		e.client.Close()
+		_ = e.client.Close()
 	}
 
 	e.AbstractExecutor.Cleanup()
@@ -1318,6 +1325,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
+
 	defer e.removeContainer(e.Context, resp.ID)
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
@@ -1419,7 +1427,7 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	io.Copy(e.Trace, &buffer)
+	_, _ = io.Copy(e.Trace, &buffer)
 	return err
 }
 
@@ -1438,7 +1446,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 	}
 	defer hijacked.Close()
 
-	stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
+	_, _ = stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
 	containerLog := containerBuffer.String()
 	return strings.TrimSpace(containerLog)
 }
