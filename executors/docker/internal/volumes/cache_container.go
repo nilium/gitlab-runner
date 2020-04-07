@@ -8,13 +8,13 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type containerClient interface {
 	docker.Client
 
-	ContainerLabels(containerType string, otherLabels ...string) map[string]string
 	WaitForContainer(id string) error
 	RemoveContainer(ctx context.Context, id string) error
 }
@@ -33,14 +33,23 @@ type cacheContainerManager struct {
 
 	helperImage        *types.ImageInspect
 	failedContainerIDs []string
+
+	labeler labels.Labeler
 }
 
-func NewCacheContainerManager(ctx context.Context, logger debugLogger, cClient containerClient, helperImage *types.ImageInspect) CacheContainersManager {
+func NewCacheContainerManager(
+	ctx context.Context,
+	logger debugLogger,
+	cClient containerClient,
+	helperImage *types.ImageInspect,
+	labeler labels.Labeler,
+) CacheContainersManager {
 	return &cacheContainerManager{
 		ctx:             ctx,
 		logger:          logger,
 		containerClient: cClient,
 		helperImage:     helperImage,
+		labeler:         labeler,
 	}
 }
 
@@ -85,7 +94,7 @@ func (m *cacheContainerManager) createCacheContainer(containerName string, conta
 		Volumes: map[string]struct{}{
 			containerPath: {},
 		},
-		Labels: m.containerClient.ContainerLabels("cache", "cache.dir="+containerPath),
+		Labels: m.labeler.Labels("type=cache", "cache.dir="+containerPath),
 	}
 
 	hostConfig := &container.HostConfig{

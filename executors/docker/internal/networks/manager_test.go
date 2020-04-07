@@ -11,14 +11,10 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
-
-var testLabels = map[string]string{
-	"label1": "value1",
-	"label2": "value2",
-}
 
 func newDebugLoggerMock() *mockDebugLogger {
 	loggerMock := new(mockDebugLogger)
@@ -30,23 +26,24 @@ func newDebugLoggerMock() *mockDebugLogger {
 func TestNewDefaultManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewManager(logger, nil, nil, map[string]string{})
+	m := NewManager(logger, nil, nil, nil)
 	assert.IsType(t, &manager{}, m)
 }
 
 func newDefaultManager() *manager {
-	m := &manager{
-		logger: newDebugLoggerMock(),
-		build: &common.Build{
-			ProjectRunnerID: 0,
-			Runner:          &common.RunnerConfig{},
-			JobResponse: common.JobResponse{
-				JobInfo: common.JobInfo{
-					ProjectID: 0,
-				},
+	b := &common.Build{
+		ProjectRunnerID: 0,
+		Runner:          &common.RunnerConfig{},
+		JobResponse: common.JobResponse{
+			JobInfo: common.JobInfo{
+				ProjectID: 0,
 			},
 		},
-		networkLabels: testLabels,
+	}
+	m := &manager{
+		logger:  newDebugLoggerMock(),
+		build:   b,
+		labeler: labels.NewLabeler(b),
 	}
 	return m
 }
@@ -96,7 +93,6 @@ func TestCreateNetwork(t *testing.T) {
 						Name: "test-network",
 					}, nil).
 					Once()
-
 			},
 		},
 		"network create per-build network failure": {

@@ -3,6 +3,7 @@ package volumes
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -10,13 +11,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 )
+
+var testLabels = map[string]string{
+	"test-label": "test-value",
+}
 
 func TestNewCacheContainerManager(t *testing.T) {
 	logger := newDebugLoggerMock()
 
-	m := NewCacheContainerManager(context.Background(), logger, nil, nil)
+	m := NewCacheContainerManager(context.Background(), logger, nil, nil, nil)
 	assert.IsType(t, &cacheContainerManager{}, m)
+}
+
+func newLabelerMock() *labels.MockLabeler {
+	l := new(labels.MockLabeler)
+	l.On("Labels", "type=cache", "cache.dir=container-path").Return(testLabels)
+
+	return l
 }
 
 func getCacheContainerManager() (*cacheContainerManager, *mockContainerClient) {
@@ -27,6 +40,7 @@ func getCacheContainerManager() (*cacheContainerManager, *mockContainerClient) {
 		containerClient:    cClient,
 		failedContainerIDs: make([]string, 0),
 		helperImage:        &types.ImageInspect{ID: "helper-image"},
+		labeler:            newLabelerMock(),
 	}
 
 	return m, cClient
@@ -168,12 +182,12 @@ func TestCacheContainerManager_CreateCacheContainer(t *testing.T) {
 					return false
 				}
 
+				if !reflect.DeepEqual(testLabels, config.Labels) {
+					return false
+				}
+
 				return config.Cmd[0] == expectedCacheCmd[0]
 			})
-
-			cClient.On("ContainerLabels", "cache", "cache.dir="+containerPath).
-				Return(map[string]string{}).
-				Once()
 
 			cClient.On("ContainerCreate", mock.Anything, configMatcher, mock.Anything, mock.Anything, containerName).
 				Return(testCase.createResult, testCase.createError).

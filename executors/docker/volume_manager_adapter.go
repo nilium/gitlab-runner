@@ -13,11 +13,6 @@ type volumesManagerAdapter struct {
 	e *executor
 }
 
-func (a *volumesManagerAdapter) ContainerLabels(containerType string, otherLabels ...string) map[string]string {
-	typeLabel := a.e.containerTypeLabel(containerType)
-	return a.e.labels(append(otherLabels, typeLabel)...)
-}
-
 func (a *volumesManagerAdapter) WaitForContainer(id string) error {
 	return a.e.waitForContainer(a.e.Context, id)
 }
@@ -42,6 +37,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		&e.BuildLogger,
 		adapter,
 		helperImage,
+		e.labeler,
 	)
 
 	config := volumes.ManagerConfig{

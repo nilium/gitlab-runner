@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
@@ -22,10 +23,10 @@ type Manager interface {
 }
 
 type manager struct {
-	logger        debugLogger
-	client        docker.Client
-	build         *common.Build
-	networkLabels map[string]string
+	logger  debugLogger
+	client  docker.Client
+	build   *common.Build
+	labeler labels.Labeler
 
 	networkMode  container.NetworkMode
 	buildNetwork types.NetworkResource
@@ -36,13 +37,13 @@ func NewManager(
 	logger debugLogger,
 	dockerClient docker.Client,
 	build *common.Build,
-	networkLabels map[string]string,
+	labeler labels.Labeler,
 ) Manager {
 	return &manager{
-		logger:        logger,
-		client:        dockerClient,
-		build:         build,
-		networkLabels: networkLabels,
+		logger:  logger,
+		client:  dockerClient,
+		build:   build,
+		labeler: labeler,
 	}
 }
 
@@ -66,7 +67,7 @@ func (m *manager) Create(ctx context.Context, networkMode string) (container.Net
 
 	m.logger.Debugln("Creating build network ", networkName)
 
-	networkResponse, err := m.client.NetworkCreate(ctx, networkName, types.NetworkCreate{Labels: m.networkLabels})
+	networkResponse, err := m.client.NetworkCreate(ctx, networkName, types.NetworkCreate{Labels: m.labeler.Labels()})
 	if err != nil {
 		return "", err
 	}

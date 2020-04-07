@@ -154,29 +154,6 @@ func (_m *mockContainerClient) ContainerKill(ctx context.Context, containerID st
 	return r0
 }
 
-// ContainerLabels provides a mock function with given fields: containerType, otherLabels
-func (_m *mockContainerClient) ContainerLabels(containerType string, otherLabels ...string) map[string]string {
-	_va := make([]interface{}, len(otherLabels))
-	for _i := range otherLabels {
-		_va[_i] = otherLabels[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, containerType)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 map[string]string
-	if rf, ok := ret.Get(0).(func(string, ...string) map[string]string); ok {
-		r0 = rf(containerType, otherLabels...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]string)
-		}
-	}
-
-	return r0
-}
-
 // ContainerLogs provides a mock function with given fields: ctx, _a1, options
 func (_m *mockContainerClient) ContainerLogs(ctx context.Context, _a1 string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 	ret := _m.Called(ctx, _a1, options)
