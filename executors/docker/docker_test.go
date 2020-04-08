@@ -177,6 +177,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	})
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	e.BuildShell = &common.ShellConfiguration{
 		Environment: []string{},
 	}

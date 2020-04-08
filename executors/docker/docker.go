@@ -1056,6 +1056,7 @@ func (e *executor) validateOSType() error {
 
 func (e *executor) createDependencies() error {
 	createDependenciesStrategy := []func() error{
+		e.createLabeler,
 		e.createNetworksManager,
 		e.createBuildNetwork,
 		e.bindDevices,
@@ -1164,8 +1165,6 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	e.AbstractExecutor.PrepareConfiguration(options)
-
-	e.labeler = labels.NewLabeler(e.Build)
 
 	err := e.connectDocker()
 	if err != nil {
