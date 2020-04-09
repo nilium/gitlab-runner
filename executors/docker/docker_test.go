@@ -1407,6 +1407,9 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	err = e.createVolumesManager()
 	require.NoError(t, err)
 
+	err = e.createLabeler()
+	require.NoError(t, err)
+
 	container, err := e.createContainer("build", common.Image{Name: common.TestAlpineImage}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
