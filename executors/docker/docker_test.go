@@ -1492,8 +1492,6 @@ func prepareTestDockerConfiguration(t *testing.T, dockerConfig *common.DockerCon
 	err = e.createLabeler()
 	require.NoError(t, err)
 
-	c.On("ImageInspectWithRaw", mock.Anything, "gitlab/gitlab-runner-helper:x86_64-latest").
-		Return(types.ImageInspect{ID: "helper-image-id"}, nil, nil).Once()
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
 	c.On("ImagePullBlocking", mock.Anything, "alpine:latest", mock.Anything).

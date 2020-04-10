@@ -462,7 +462,7 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 
 	config := &container.Config{
 		Image:  serviceImage.ID,
-		Labels: e.labeler.Labels(e.containerTypeLabel(labelServiceType), "service="+service, "service.version="+version),
+		Labels: e.labeler.Labels("type="+labelServiceType, "service="+service, "service.version="+version),
 		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
 	}
 
@@ -502,10 +502,6 @@ func (e *executor) createService(serviceIndex int, service, version, image strin
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
-}
-
-func (e *executor) containerTypeLabel(typeValue string) string {
-	return fmt.Sprintf("%s=%s", labelTypeKey, typeValue)
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
@@ -722,7 +718,7 @@ func (e *executor) createContainer(containerType string, imageDefinition common.
 		Image:        image.ID,
 		Hostname:     hostname,
 		Cmd:          cmd,
-		Labels:       e.labeler.Labels(e.containerTypeLabel(containerType)),
+		Labels:       e.labeler.Labels("type=" + containerType),
 		Tty:          false,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -1314,7 +1310,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	config := &container.Config{
 		Cmd:    cmd,
 		Image:  waitImage.ID,
-		Labels: e.labeler.Labels(e.containerTypeLabel(labelWaitType), "wait="+service.ID),
+		Labels: e.labeler.Labels("type="+labelWaitType, "wait="+service.ID),
 		Env:    environment,
 	}
 	hostConfig := &container.HostConfig{
