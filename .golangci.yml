@@ -84,3 +84,4 @@ issues:
       linters:
         - deadcode
         - unused
+  max-same-issues: 0
