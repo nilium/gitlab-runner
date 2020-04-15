@@ -82,8 +82,7 @@ type executor struct {
 	builds   []string // IDs of successfully created build containers
 	services []*types.Container
 
-	links   []string
-	labeler labels.Labeler
+	links []string
 
 	devices []container.DeviceMapping
 
@@ -94,6 +93,7 @@ type executor struct {
 
 	volumesManager  volumes.Manager
 	networksManager networks.Manager
+	labeler         labels.Labeler
 
 	networkMode container.NetworkMode
 
