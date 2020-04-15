@@ -219,48 +219,17 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 	return nil
 }
 
-func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
+func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor, predefinedEnv bool) error {
 	b.CurrentStage = buildStage
 
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
 
-	var subStages []BuildStage
-	if buildStage == BuildStageUserScript {
-		for _, s := range b.Steps {
-			// after_script has a separate BuildStage. See common.BuildStageAfterScript
-			if s.Name == StepNameAfterScript {
-				continue
-			}
-			subStages = append(subStages, s.BuildStage())
-		}
-	} else {
-		subStages = append(subStages, buildStage)
-	}
-	var predefinedEnv bool
-	switch buildStage {
-	case BuildStageUserScript, BuildStageAfterScript:
-		predefinedEnv = false
-	default:
-		predefinedEnv = true
-	}
-
-	for _, s := range subStages {
-		err := b.executeSubStage(ctx, s, executor, predefinedEnv)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (b *Build) executeSubStage(ctx context.Context, subStage BuildStage, executor Executor, predefinedEnv bool) error {
 	shell := executor.Shell()
 	if shell == nil {
 		return errors.New("no shell defined")
 	}
 
-	script, err := GenerateShellScript(subStage, *shell)
+	script, err := GenerateShellScript(buildStage, *shell)
 	if err != nil {
 		return err
 	}
@@ -273,15 +242,15 @@ func (b *Build) executeSubStage(ctx context.Context, subStage BuildStage, execut
 	cmd := ExecutorCommand{
 		Context:    ctx,
 		Script:     script,
-		Stage:      subStage,
+		Stage:      buildStage,
 		Predefined: predefinedEnv,
 	}
 
 	section := &helpers.BuildSection{
-		Name:        string(subStage),
+		Name:        string(buildStage),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			b.logger.Println(fmt.Sprintf("%s%s%s", helpers.ANSI_BOLD_CYAN, getStageDescription(subStage), helpers.ANSI_RESET))
+			b.logger.Println(fmt.Sprintf("%s%s%s", helpers.ANSI_BOLD_CYAN, getStageDescription(buildStage), helpers.ANSI_RESET))
 			return executor.Run(cmd)
 		},
 	}
@@ -312,10 +281,10 @@ func getStageDescription(stage BuildStage) string {
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
 	if state == nil {
-		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor)
+		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor, true)
 	}
 
-	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
+	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor, true)
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
@@ -324,32 +293,37 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	b.createReferees(executor)
 
 	// Prepare stage
-	err := b.executeStage(ctx, BuildStagePrepare, executor)
+	err := b.executeStage(ctx, BuildStagePrepare, executor, true)
 
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), true)
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), true)
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), true)
 	}
 
 	if err == nil {
-		// Execute user build script (before_script + script)
-		err = b.executeStage(ctx, BuildStageUserScript, executor)
+		for _, s := range b.Steps {
+			// after_script has a separate BuildStage. See common.BuildStageAfterScript
+			if s.Name == StepNameAfterScript {
+				continue
+			}
+			err = b.executeStage(ctx, StepToBuildStage(s), executor, false)
+		}
 
 		// Execute after script (after_script)
 		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
 		defer timeoutCancel()
 
-		b.executeStage(timeoutContext, BuildStageAfterScript, executor)
+		b.executeStage(timeoutContext, BuildStageAfterScript, executor, false)
 	}
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
+		err = b.executeStage(ctx, BuildStageArchiveCache, executor, true)
 	}
 
 	artifactUploadError := b.executeUploadArtifacts(ctx, err, executor)
@@ -365,6 +339,11 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Otherwise, use uploadError
 	return artifactUploadError
+}
+
+// StepToBuildStage returns the BuildStage corresponding to a step.
+func StepToBuildStage(s Step) BuildStage {
+	return BuildStage(fmt.Sprintf("Step%s", s.Name))
 }
 
 func (b *Build) createReferees(executor Executor) {
@@ -404,12 +383,12 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime time.Time, 
 	}
 }
 
-func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int) (err error) {
+func (b *Build) attemptExecuteStage(ctx context.Context, buildStage BuildStage, executor Executor, attempts int, predefinedEnv bool) (err error) {
 	if attempts < 1 || attempts > 10 {
 		return fmt.Errorf("Number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
 	for attempt := 0; attempt < attempts; attempt++ {
-		if err = b.executeStage(ctx, buildStage, executor); err == nil {
+		if err = b.executeStage(ctx, buildStage, executor, predefinedEnv); err == nil {
 			return
 		}
 	}

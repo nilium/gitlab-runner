@@ -441,7 +441,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo, buildStage common.BuildStage) (err error) {
 	var scriptStep *common.Step
 	for _, step := range info.Build.Steps {
-		if step.BuildStage() == buildStage {
+		if common.StepToBuildStage(step) == buildStage {
 			scriptStep = &step
 			break
 		}
