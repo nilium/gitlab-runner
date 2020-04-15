@@ -357,7 +357,7 @@ func TestPrepareFailureOnBuildError(t *testing.T) {
 		},
 	}
 	err = build.Run(&Config{}, &Trace{Writer: os.Stdout})
-	assert.IsType(t, err, &BuildError{})
+	assert.IsType(t, &BuildError{}, err)
 }
 
 func TestJobFailure(t *testing.T) {

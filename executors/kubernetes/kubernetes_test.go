@@ -157,7 +157,7 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
 }
 
@@ -236,7 +236,7 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 	defer timeoutTimer.Stop()
 
 	err = build.Run(&common.Config{}, trace)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, err)
 	assert.EqualError(t, err, "canceled")
 }
 
