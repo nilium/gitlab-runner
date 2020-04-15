@@ -38,6 +38,11 @@ const (
 	gitCleanFlagsNone    = "none"
 )
 
+const (
+	usePredefinedEnv = true
+	useExistingEnv = false
+)
+
 type SubmoduleStrategy int
 
 const (
@@ -305,10 +310,10 @@ func getStageDescription(stage BuildStage) string {
 
 func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
 	if state == nil {
-		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor, true)
+		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor, usePredefinedEnv)
 	}
 
-	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor, true)
+	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor, usePredefinedEnv)
 }
 
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
@@ -317,16 +322,16 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	b.createReferees(executor)
 
 	// Prepare stage
-	err := b.executeStage(ctx, BuildStagePrepare, executor, true)
+	err := b.executeStage(ctx, BuildStagePrepare, executor, usePredefinedEnv)
 
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), true)
+		err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts(), usePredefinedEnv)
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), true)
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts(), usePredefinedEnv)
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), true)
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts(), usePredefinedEnv)
 	}
 
 	if err == nil {
@@ -335,19 +340,19 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			if s.Name == StepNameAfterScript {
 				continue
 			}
-			err = b.executeStage(ctx, StepToBuildStage(s), executor, false)
+			err = b.executeStage(ctx, StepToBuildStage(s), executor, useExistingEnv)
 		}
 
 		// Execute after script (after_script)
 		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
 		defer timeoutCancel()
 
-		b.executeStage(timeoutContext, BuildStageAfterScript, executor, false)
+		b.executeStage(timeoutContext, BuildStageAfterScript, executor, useExistingEnv)
 	}
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeStage(ctx, BuildStageArchiveCache, executor, true)
+		err = b.executeStage(ctx, BuildStageArchiveCache, executor, usePredefinedEnv)
 	}
 
 	artifactUploadError := b.executeUploadArtifacts(ctx, err, executor)
