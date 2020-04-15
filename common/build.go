@@ -40,7 +40,7 @@ const (
 
 const (
 	usePredefinedEnv = true
-	useExistingEnv = false
+	useExistingEnv   = false
 )
 
 type SubmoduleStrategy int
