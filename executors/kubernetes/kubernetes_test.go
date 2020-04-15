@@ -546,7 +546,7 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 
 	tests := map[string]struct {
 		clonePath         string
-		expectedErrorType interface{}
+		expectedErrorType error
 	}{
 		"uses custom clone path": {
 			clonePath:         "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
@@ -578,7 +578,7 @@ func testKubernetesCustomClonePathFeatureFlag(t *testing.T, featureFlagName stri
 			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-			assert.IsType(t, test.expectedErrorType, err)
+			assert.IsType(t, test.expectedErrorType, errors.Unwrap(err))
 		})
 	}
 }
@@ -631,7 +631,7 @@ func testKubernetesMissingImageFeatureFlag(t *testing.T, featureFlagName string,
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, errors.Unwrap(err))
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
@@ -656,7 +656,7 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.IsType(t, err, &common.BuildError{})
+	assert.IsType(t, &common.BuildError{}, errors.Unwrap(err))
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
