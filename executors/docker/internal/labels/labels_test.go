@@ -10,7 +10,7 @@ import (
 func TestNewLabeler(t *testing.T) {
 	l := NewLabeler(&common.Build{})
 
-	assert.IsType(t, &defaultLabeler{}, l)
+	assert.IsType(t, new(defaultLabeler), l)
 }
 
 func TestLabels(t *testing.T) {
