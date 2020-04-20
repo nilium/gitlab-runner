@@ -85,14 +85,15 @@ code_quality:
     expire_in: 7d
 
 dockerfiles lint:
-  image: "rcjsuen/dockerfile-utils"
+  image: "hadolint/hadolint:v1.17.4"
   stage: test
   extends:
     - .merge_request_pipelines
     - .except_docs
     - .no_cache_and_dependencies
   script:
-    - make lint-dockerfiles
+    - apk add bash coreutils findutils
+    - scripts/lint-dockerfiles
 
 unit test:
   extends:

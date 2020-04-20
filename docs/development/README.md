@@ -142,8 +142,10 @@ make test
 
 ## 8. Install optional tools
 
-- Install `golangci-lint`, used for the `make lint` target.
-- Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
+- Install [`golangci-lint`](https://github.com/golangci/golangci-lint#install), used for the `make lint` target.
+- Install [`hadolint`](https://github.com/hadolint/hadolint#install), used for the `make lint-dockerfiles` target.
+- Install [`markdown-lint`](https://github.com/igorshubovych/markdownlint-cli#installation) and [`vale`](https://errata-ai.gitbook.io/vale/#installation),
+  used for the `make lint-docs` target.
 
 Installation instructions will pop up when running a Makefile target
 if a tool is missing.
