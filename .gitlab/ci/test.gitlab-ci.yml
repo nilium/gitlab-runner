@@ -84,6 +84,16 @@ code_quality:
     - ${REPORT_FILE}
     expire_in: 7d
 
+dockerfiles lint:
+  image: "rcjsuen/dockerfile-utils"
+  stage: test
+  extends:
+    - .merge_request_pipelines
+    - .except_docs
+    - .no_cache_and_dependencies
+  script:
+    - make lint-dockerfiles
+
 unit test:
   extends:
   - .merge_request_pipelines

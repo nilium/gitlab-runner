@@ -82,6 +82,7 @@ help:
 	# make test - run project tests
 	# make lint - run code quality analysis
 	# make lint-docs - run documentation linting
+	# make lint-dockerfiles - run Dockerfile linting
 	#
 	# Deployment commands:
 	# make deps - install all dependencies
@@ -105,6 +106,9 @@ lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint:
 	@golangci-lint run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
+
+lint-dockerfiles:
+	@scripts/lint-dockerfiles
 
 lint-docs:
 	@scripts/lint-docs
