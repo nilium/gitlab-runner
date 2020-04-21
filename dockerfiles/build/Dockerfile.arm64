@@ -3,8 +3,12 @@ FROM multiarch/alpine:arm64-v3.10
 # gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
-RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
-	&& ln -s miniperl /usr/bin/perl
+# Package versions pinned for reproducible builds (versions retrieved with `apk info`)
+RUN apk add --no-cache \
+        bash=5.0.0-r0 \
+        ca-certificates=20191127-r0 \
+        git=2.22.4-r0 git-lfs=2.7.2-r0 miniperl=5.28.2-r1 \
+    && ln -s miniperl /usr/bin/perl
 
 RUN git lfs install --skip-repo
 
