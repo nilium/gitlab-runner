@@ -1,3 +1,4 @@
+FROM hadolint/hadolint:v1.17.4 AS hadolint
 FROM golang:1.13.8
 
 # Install required dependencies
@@ -32,6 +33,8 @@ ARG BUILDX_VERSION
 RUN mkdir -p ~/.docker/cli-plugins && \
     wget -q https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64 -O ~/.docker/cli-plugins/docker-buildx && \
     chmod a+x ~/.docker/cli-plugins/docker-buildx
+
+COPY --from=hadolint /bin/hadolint /bin/
 
 COPY Makefile* /tmp/
 WORKDIR /tmp
