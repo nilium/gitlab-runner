@@ -1008,11 +1008,11 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 			expectedValue: false,
 		},
 		"it enables FF": {
-			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=true",
+			variable:      "FF_NETWORK_PER_BUILD=true",
 			expectedValue: true,
 		},
 		"it disable FF": {
-			variable:      "FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER=false",
+			variable:      "FF_NETWORK_PER_BUILD=false",
 			expectedValue: false,
 		},
 	}
@@ -1026,7 +1026,7 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 				},
 			}
 
-			result := build.IsFeatureFlagOn("FF_USE_LEGACY_VOLUMES_MOUNTING_ORDER")
+			result := build.IsFeatureFlagOn("FF_NETWORK_PER_BUILD")
 			assert.Equal(t, test.expectedValue, result)
 		})
 	}
@@ -1258,10 +1258,13 @@ func TestWaitForTerminal(t *testing.T) {
 				"Authorization": []string{build.Session.Token},
 			}
 
-			conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 			require.NotNil(t, conn)
 			require.NoError(t, err)
-			defer conn.Close()
+			defer func() {
+				resp.Body.Close()
+				conn.Close()
+			}()
 
 			ctx, cancel := context.WithTimeout(context.Background(), build.GetBuildTimeout())
 
@@ -1451,7 +1454,6 @@ func TestBuildFinishTimeout(t *testing.T) {
 			assert.NotNil(t, entry)
 		})
 	}
-
 }
 
 func TestProjectUniqueName(t *testing.T) {
@@ -1512,6 +1514,52 @@ func TestProjectUniqueName(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, test.expectedName, test.build.ProjectUniqueName())
+		})
+	}
+}
+
+func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
+	tests := []struct {
+		attempts         string
+		expectedAttempts int
+		expectedErr      error
+	}{
+		{
+			attempts:         "",
+			expectedAttempts: 1,
+		},
+		{
+			attempts:         "3",
+			expectedAttempts: 3,
+		},
+		{
+			attempts:         "0",
+			expectedAttempts: 0,
+			expectedErr:      &invalidAttemptError{},
+		},
+		{
+			attempts:         "99",
+			expectedAttempts: 0,
+			expectedErr:      &invalidAttemptError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.attempts, func(t *testing.T) {
+			build := Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						JobVariable{
+							Key:   ExecutorJobSectionAttempts,
+							Value: tt.attempts,
+						},
+					},
+				},
+			}
+
+			attempts, err := build.GetExecutorJobSectionAttempts()
+			assert.True(t, errors.Is(err, tt.expectedErr))
+			assert.Equal(t, tt.expectedAttempts, attempts)
 		})
 	}
 }

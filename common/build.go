@@ -85,6 +85,23 @@ var BuildStages = []BuildStage{
 	BuildStageUploadOnFailureArtifacts,
 }
 
+const (
+	ExecutorJobSectionAttempts = "EXECUTOR_JOB_SECTION_ATTEMPTS"
+)
+
+type invalidAttemptError struct {
+	key string
+}
+
+func (i *invalidAttemptError) Error() string {
+	return fmt.Sprintf("number of attempts out of the range [1, 10] for variable: %s", i.key)
+}
+
+func (i *invalidAttemptError) Is(err error) bool {
+	_, ok := err.(*invalidAttemptError)
+	return ok
+}
+
 type Build struct {
 	JobResponse `yaml:",inline"`
 
@@ -165,7 +182,7 @@ func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 	// ex.<some-path>/01234567/0/group/repo/
 	if sharedDir {
 		dir = path.Join(
-			fmt.Sprintf("%s", b.Runner.ShortDescription()),
+			b.Runner.ShortDescription(),
 			fmt.Sprintf("%d", b.ProjectRunnerID),
 			dir,
 		)
@@ -560,7 +577,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 	expiryTime, _ := ctx.Deadline()
 
 	if expiryTime.Before(time.Now().Add(timeout)) {
-		timeout = expiryTime.Sub(time.Now())
+		timeout = time.Until(expiryTime)
 	}
 
 	return timeout
@@ -875,7 +892,7 @@ func (b *Build) IsDebugTraceEnabled() bool {
 	}
 
 	if b.Runner.DebugTraceDisabled {
-		if trace == true {
+		if trace {
 			b.logger.Warningln("CI_DEBUG_TRACE usage is disabled on this Runner")
 		}
 
@@ -919,6 +936,23 @@ func (b *Build) GetCacheRequestTimeout() int {
 		return DefaultCacheRequestTimeout
 	}
 	return timeout
+}
+
+func (b *Build) GetExecutorJobSectionAttempts() (int, error) {
+	attempts, err := strconv.Atoi(b.GetAllVariables().Get(ExecutorJobSectionAttempts))
+	if err != nil {
+		return DefaultExecutorStageAttempts, nil
+	}
+
+	if validAttempts(attempts) {
+		return 0, &invalidAttemptError{key: ExecutorJobSectionAttempts}
+	}
+
+	return attempts, nil
+}
+
+func validAttempts(attempts int) bool {
+	return attempts < 1 || attempts > 10
 }
 
 func (b *Build) Duration() time.Duration {

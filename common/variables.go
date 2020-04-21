@@ -3,9 +3,8 @@ package common
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/shell"
 )
 
 type JobVariable struct {
@@ -56,11 +55,11 @@ func (b JobVariables) Get(key string) string {
 }
 
 func (b JobVariables) ExpandValue(value string) string {
-	return shell.LegacyExpand(value, b.Get)
+	return os.Expand(value, b.Get)
 }
 
 func (b JobVariables) Expand() JobVariables {
-	var variables JobVariables
+	variables := make(JobVariables, 0, len(b))
 	for _, variable := range b {
 		if !variable.Raw {
 			variable.Value = b.ExpandValue(variable.Value)
