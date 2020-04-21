@@ -54,8 +54,6 @@ const (
 )
 
 const (
-	labelTypeKey     = "type"
-	labelCacheType   = "cache"
 	labelServiceType = "service"
 	labelWaitType    = "wait"
 )
