@@ -152,6 +152,11 @@ windows 1809 tests:
   - .windows test
   - .windows1809
 
+windows 1903 tests:
+  extends:
+  - .windows test
+  - .windows1903
+
 git 1.7.1:
   extends:
   - .merge_request_pipelines
