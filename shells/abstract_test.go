@@ -316,7 +316,7 @@ func TestWriteUserScript(t *testing.T) {
 			},
 			"",
 			"",
-			common.BuildStage("Stepscript"),
+			common.BuildStage("step_script"),
 			func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))

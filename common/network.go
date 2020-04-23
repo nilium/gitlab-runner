@@ -155,7 +155,6 @@ type StepName string
 
 const (
 	StepNameScript      StepName = "script"
-	StepNameRelease     StepName = "release"
 	StepNameAfterScript StepName = "after_script"
 )
 
