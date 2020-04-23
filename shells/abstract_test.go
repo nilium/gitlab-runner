@@ -343,7 +343,7 @@ func TestWriteUserScript(t *testing.T) {
 			},
 			"echo prebuild",
 			"echo postbuild",
-			common.BuildStage("Steprelease"),
+			common.BuildStage("step_release"),
 			func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))
