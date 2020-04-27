@@ -334,12 +334,14 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
 	}
 
+	afterCtx := b.getAfterScriptCtx(ctx)
+
 	if err == nil {
 		// Execute user build script (before_script + script)
 		err = b.executeStage(ctx, BuildStageUserScript, executor)
 
 		// Execute after script (after_script)
-		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
+		timeoutContext, timeoutCancel := context.WithTimeout(afterCtx, AfterScriptTimeout)
 		defer timeoutCancel()
 
 		b.executeStage(timeoutContext, BuildStageAfterScript, executor)
@@ -347,14 +349,14 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Execute post script (cache store, artifacts upload)
 	if err == nil {
-		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
+		err = b.executeStage(afterCtx, BuildStageArchiveCache, executor)
 	}
 
-	artifactUploadError := b.executeUploadArtifacts(ctx, err, executor)
+	artifactUploadError := b.executeUploadArtifacts(afterCtx, err, executor)
 
 	// track job end and execute referees
 	endTime := time.Now()
-	b.executeUploadReferees(ctx, startTime, endTime)
+	b.executeUploadReferees(afterCtx, startTime, endTime)
 
 	// Use job's error as most important
 	if err != nil {
@@ -363,6 +365,22 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	// Otherwise, use uploadError
 	return artifactUploadError
+}
+
+func (b *Build) getAfterScriptCtx(ctx context.Context) context.Context {
+	var afterScriptStep *Step
+	for _, s := range b.Steps {
+		if s.Name == StepNameAfterScript {
+			afterScriptStep = &s
+		}
+	}
+	if afterScriptStep == nil {
+		return ctx
+	}
+	if afterScriptStep.RunOnCancel {
+		return context.Background()
+	}
+	return ctx
 }
 
 func (b *Build) createReferees(executor Executor) {
