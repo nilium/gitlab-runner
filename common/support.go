@@ -204,6 +204,7 @@ func getBuildResponse(repoURL string, commands []string) JobResponse {
 				Script:       commands,
 				When:         StepWhenAlways,
 				AllowFailure: false,
+				RunOnCancel:  false,
 			},
 		},
 	}
