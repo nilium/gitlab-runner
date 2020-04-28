@@ -151,7 +151,7 @@ func TestBuildCancel(t *testing.T) {
 		afterStagesCanceled bool
 		steps               Steps
 	}{
-		"don't run after_script": {
+		"don't run after_script and subsequent stages on canceled job": {
 			true,
 			[]Step{
 				{
@@ -166,7 +166,7 @@ func TestBuildCancel(t *testing.T) {
 				},
 			},
 		},
-		"run after_script": {
+		"run after_script and subsequent stages on canceled job": {
 			false,
 			[]Step{
 				{
@@ -190,7 +190,6 @@ func TestBuildCancel(t *testing.T) {
 			p := MockExecutorProvider{}
 			defer p.AssertExpectations(t)
 
-			// Create executor only once
 			p.On("CanCreate").Return(true).Once()
 			p.On("GetDefaultShell").Return("bash").Once()
 			p.On("GetFeatures", mock.Anything).Return(nil).Twice()
@@ -238,7 +237,6 @@ func TestBuildCancel(t *testing.T) {
 			assert.Contains(t, err.Error(), "canceled")
 		})
 	}
-
 }
 
 func TestJobImageExposed(t *testing.T) {
