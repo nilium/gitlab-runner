@@ -6,9 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -1062,22 +1060,7 @@ func TestCreateDependencies(t *testing.T) {
 	assert.Equal(t, testError, err)
 }
 
-var testFileAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"aW52YWxpZF91c2VyOmludmFsaWRfcGFzc3dvcmQ="},"registry2.domain.tld:5005":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
-var testVariableAuthConfigs = `{"auths":{"https://registry.domain.tld:5005/v1/":{"auth":"dGVzdF91c2VyOnRlc3RfcGFzc3dvcmQ="}}}`
-
-func getAuthConfigTestExecutor(t *testing.T, precreateConfigFile bool) *executor {
-	tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
-	require.NoError(t, err)
-
-	if precreateConfigFile {
-		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
-		err = ioutil.WriteFile(dockerConfigFile, []byte(testFileAuthConfigs), 0600)
-		require.NoError(t, err)
-		auth.HomeDirectory = tempHomeDir
-	} else {
-		auth.HomeDirectory = ""
-	}
-
+func getTestExecutor(t *testing.T) *executor {
 	e := new(executor)
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -1156,7 +1139,7 @@ func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
 	remoteImage := "registry.domain.tld:5005/image/name:version"
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
-	e := getAuthConfigTestExecutor(t, false)
+	e := getTestExecutor(t)
 	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyAlways
 
@@ -1171,7 +1154,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 	remoteImage := "registry.domain.tld:5005/image/name:version"
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
-	e := getAuthConfigTestExecutor(t, false)
+	e := getTestExecutor(t)
 	e.Context = context.Background()
 	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
 
