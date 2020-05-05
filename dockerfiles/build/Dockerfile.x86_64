@@ -1,16 +1,23 @@
 FROM alpine:3.10
 
+ARG DUMB_INIT_VERSION
+
 # gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
-RUN apk add --no-cache bash ca-certificates git git-lfs miniperl \
+RUN apk add --no-cache bash ca-certificates git git-lfs miniperl dumb-init=${DUMB_INIT_VERSION} \
 	&& ln -s miniperl /usr/bin/perl
 
 RUN git lfs install --skip-repo
+
+COPY ./helpers/entrypoint /
+RUN chmod +x /entrypoint
 
 COPY ./scripts/ /usr/bin
 COPY ./binaries/gitlab-runner-helper.x86_64 /usr/bin/gitlab-runner-helper
 
 RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
 
+VOLUME ["/etc/gitlab-runner"]
+ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
 CMD ["sh"]

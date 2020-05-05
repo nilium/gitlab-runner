@@ -34,3 +34,8 @@ RUN git config --system core.longpaths true
 RUN git lfs install --skip-repo
 
 COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Program Files\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
+
+COPY [".\\helpers\\entrypoint.cmd", ".\\helpers\\install-ca-cert.ps1", ".\\"]
+
+VOLUME ["C:\\etc\\gitlab-runner"]
+ENTRYPOINT ["entrypoint.cmd"]

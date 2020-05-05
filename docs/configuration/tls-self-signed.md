@@ -46,12 +46,10 @@ trusted certificates.
 
 This approach is secure, but makes the runner a single point of trust.
 
-## Using TLS in build scripts
+## Using TLS in user scripts
 
 The scenario described in the previous section applies to built-in Runner operations
-such as fetching a repository or uploading artifacts. These operations are performed
-by a separate Runner helper image, which installs the custom certificate with a
-[script](https://gitlab.com/gitlab-org/gitlab-runner/blob/3d9a706c59d014409f353da5b1fca1d3197504f0/dockerfiles/alpine/entrypoint#L10-14).
+such as fetching a repository or uploading artifacts.
 
 If your build script needs to communicate with peers through TLS and needs to rely on
 a self-signed certificate or custom Certificate Authority, you will need to perform the

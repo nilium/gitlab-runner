@@ -12,7 +12,7 @@
 
 
 # Tar files that we want to generate from the Docker file system, this is
-# genarlly used for linux based Dockerfiles.
+# generally used for linux based Dockerfiles.
 BASE_TAR_PATH := out/helper-images/prebuilt
 TAR += ${BASE_TAR_PATH}-x86_64.tar.xz
 TAR += ${BASE_TAR_PATH}-arm.tar.xz
@@ -29,9 +29,9 @@ BINARIES += ${BASE_BINARY_PATH}.x86_64
 BINARIES += ${BASE_BINARY_PATH}.arm
 BINARIES += ${BASE_BINARY_PATH}.arm64
 
-# Define variables with the archiecture for each matching binary. We are using
+# Define variables with the architecture for each matching binary. We are using
 # the following pattern match GO_ARCH_{{arch}}-{{os}}, these should match up
-# with BINARIES variables. The value of the varible is the dist name from `go tool dist list`
+# with BINARIES variables. The value of the variable is the dist name from `go tool dist list`
 GO_ARCH_x86_64 = linux/amd64
 GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
@@ -54,9 +54,12 @@ helper-docker: $(TAR)
 out/helper-images/prebuilt-%.tar.xz: out/helper-images/prebuilt-%.tar
 	xz -f -9 $<
 
+out/helper-images/prebuilt-%.tar: DUMB_INIT_VERSION=1.2.2-r1
 out/helper-images/prebuilt-%.tar: dockerfiles/build/binaries/gitlab-runner-helper.%
 	@mkdir -p $$(dirname $@_)
-	docker build -t gitlab/gitlab-runner-helper:$*-$(REVISION) -f dockerfiles/build/Dockerfile.$* dockerfiles/build
+	docker build -t gitlab/gitlab-runner-helper:$*-$(REVISION) \
+		--build-arg DUMB_INIT_VERSION=$(DUMB_INIT_VERSION) \
+		-f dockerfiles/build/Dockerfile.$* dockerfiles/build
 	-docker rm -f gitlab-runner-prebuilt-$*-$(REVISION)
 	docker create --name=gitlab-runner-prebuilt-$*-$(REVISION) gitlab/gitlab-runner-helper:$*-$(REVISION) /bin/sh
 	docker export -o $@ gitlab-runner-prebuilt-$*-$(REVISION)
