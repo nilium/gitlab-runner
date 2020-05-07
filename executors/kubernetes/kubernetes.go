@@ -699,10 +699,6 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	return volumes
 }
 
-type dockerConfigEntry struct {
-	Username, Password string
-}
-
 func (s *executor) setupCredentials() error {
 	s.Debugln("Setting up secrets")
 
