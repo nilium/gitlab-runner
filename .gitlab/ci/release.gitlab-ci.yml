@@ -187,19 +187,3 @@ stable servercore1809 docker images:
   environment:
     name: stable/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-static QA:
-  extends:
-  - .merge_request_pipelines
-  - .except_docs
-  - .no_cache
-  stage: release
-  image: alpine:3.7
-  needs:
-  - code_quality
-  script: |
-    if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
-      apk add -U --no-cache jq > /dev/null
-      jq -C . gl-code-quality-report.json
-      exit 1
-    fi
