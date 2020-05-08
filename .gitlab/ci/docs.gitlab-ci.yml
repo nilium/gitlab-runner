@@ -4,6 +4,7 @@
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   image: ruby:2.6-alpine
+  needs: []
   before_script:
   - unset GPG_KEY
   - gem install gitlab --no-doc
