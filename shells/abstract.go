@@ -437,14 +437,7 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 }
 
 func (b *AbstractShell) writeUserScript(w ShellWriter, info common.ShellScriptInfo) (err error) {
-	var scriptStep *common.Step
-	for _, step := range info.Build.Steps {
-		if step.Name == common.StepNameScript {
-			scriptStep = &step
-			break
-		}
-	}
-
+	scriptStep := info.Build.GetStep(common.StepNameScript)
 	if scriptStep == nil {
 		return nil
 	}
@@ -595,14 +588,7 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 }
 
 func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
-	var afterScriptStep *common.Step
-	for _, step := range info.Build.Steps {
-		if step.Name == common.StepNameAfterScript {
-			afterScriptStep = &step
-			break
-		}
-	}
-
+	afterScriptStep := info.Build.GetStep(common.StepNameAfterScript)
 	if afterScriptStep == nil {
 		return nil
 	}
