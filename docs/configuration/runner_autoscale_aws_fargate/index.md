@@ -175,7 +175,7 @@ test:
 
    [session_server]
      session_timeout = 1800
-   
+
    name = "fargate-test"
    url = "https://gitlab.com/"
    token = "__REDACTED__"
@@ -209,7 +209,7 @@ test:
    - Choose your region. Take the `Subnet` value from the Runner Manager instance
      details (search for `Subnet ID` value).
    - Get the SecurityGroup ID from its details: find `Security groups` at Runner Manager instance
-     details page, click the security group you crated earlier and copy `Security group ID` from there. 
+     details page, click the security group you crated earlier and copy `Security group ID` from there.
      Note - in a production setting,
      you should follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using Security groups.
@@ -238,7 +238,7 @@ following steps:
 1. Tier = `Standard`.
 1. Type = `String`.
 1. Copy the contents of the file `/root/.ssh/id_rsa.pub` on the Runner Manager instance and paste it to the `value` field.
-1. Click `Create parameter`. 
+1. Click `Create parameter`.
 
 ## Step 7. Create an ECS Fargate cluster
 
@@ -274,7 +274,7 @@ to the container image that you are going to use for your CI builds.
    1. Define port mapping for 22/TCP.
    1. Define a new environment variable `SSH_PUBLIC_KEY`, set it as `ValueFrom` and
       use `arn:aws:ssm:<region>:<account-id>:parameter/SSH_PUBLIC_KEY` as the value.
-      Use the region and account-id noted previously. For example, if your `Cluster ARN` looked like 
+      Use the region and account-id noted previously. For example, if your `Cluster ARN` looked like
       `arn:aws:ecs:eu-west-1:1234567890:cluster/fargate-test-cluster/`, then the value for `SSH_PUBLIC_KEY`
       should be `arn:aws:ssm:eu-west-1:1234567890:parameter/SSH_PUBLIC_KEY`.
    1. Click `Add`.
