@@ -49,6 +49,17 @@ check feature flags docs:
       exit 1
     )
 
+# prepare done is used as a sentinel for "Prebuild" stage completion, so we can kick off builds in later stages
+# without waiting for the completion of the Test stage
+prepare done:
+  stage: test
+  extends:
+  - .merge_request_pipelines
+  - .except_docs
+  - .no_cache_and_dependencies
+  script:
+  - exit 0
+
 check modules:
   stage: test
   extends:
