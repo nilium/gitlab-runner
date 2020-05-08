@@ -17,6 +17,7 @@ docs lint:
   extends:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
+  needs: []
   script:
   # Lint prose and Markdown
   - make lint-docs VALE_MIN_ALERT_LEVEL=error
@@ -35,6 +36,7 @@ check feature flags docs:
   extends:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
+  needs: []
   script:
   - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
   - make update_feature_flags_docs
@@ -42,7 +44,7 @@ check feature flags docs:
     diff docs/configuration/feature-flags.md.orig docs/configuration/feature-flags.md || (
       echo
       echo "Feature Flags list in documentation is not up-to-date"
-      echo "Run 'make update_feature_flags_docs' to upate it"
+      echo "Run 'make update_feature_flags_docs' to update it"
       echo
       exit 1
     )
@@ -53,6 +55,7 @@ check modules:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
+  needs: []
   script:
   - make check_modules
 
@@ -62,6 +65,7 @@ check mocks:
   - .merge_request_pipelines
   - .except_docs
   - .no_cache_and_dependencies
+  needs: []
   script:
   - make check_mocks
 
@@ -71,6 +75,7 @@ code_quality:
   - .merge_request_pipelines
   - .no_cache_and_dependencies
   image: golangci/golangci-lint:v1.25.0
+  needs: []
   variables:
     REPORT_FILE: gl-code-quality-report.json
     LINT_FLAGS: "--issues-exit-code 0 --color never --deadline 15m"
