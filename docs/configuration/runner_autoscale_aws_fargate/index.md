@@ -274,7 +274,7 @@ to the container image that you are going to use for your CI builds.
    1. Define port mapping for 22/TCP.
    1. Define a new environment variable `SSH_PUBLIC_KEY`, set it as `ValueFrom` and
       use `arn:aws:ssm:<region>:<account-id>:parameter/SSH_PUBLIC_KEY` as the value.
-      Use the region and account-id noted previously. For example, you your `Cluster ARN` looked like 
+      Use the region and account-id noted previously. For example, if your `Cluster ARN` looked like 
       `arn:aws:ecs:eu-west-1:1234567890:cluster/fargate-test-cluster/`, then the value for `SSH_PUBLIC_KEY`
       should be `arn:aws:ssm:eu-west-1:1234567890:parameter/SSH_PUBLIC_KEY`.
    1. Click `Add`
