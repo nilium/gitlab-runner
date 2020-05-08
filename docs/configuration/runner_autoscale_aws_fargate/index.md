@@ -262,12 +262,12 @@ for detailed instructions on setting up and working with a cluster on ECS Fargat
 In this step you will create a task definition of type `Fargate` with a reference
 to the container image that you are going to use for your CI builds.
 
-1. Go to [http://console.aws.amazon.com/ecs/home#/taskDefinitions](http://console.aws.amazon.com/ecs/home#/taskDefinitions)
+1. Go to [http://console.aws.amazon.com/ecs/home#/taskDefinitions](http://console.aws.amazon.com/ecs/home#/taskDefinitions).
 1. Click `Create new Task Definition`.
 1. Choose `Fargate` and click `Next step`.
 1. Give it a name `test-task` (Note: the name is the same as the value defined in
    the `fargate.toml` file but without `:1`).
-1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`
+1. Select values for `Task memory (GB)` and `Task CPU (vCPU)`.
 1. Click `Add Container`, then:
    1. Give it a name (for example `job-container`)
    1. Define image (for example `registry.gitlab.com/tmaczukin-test-projects/fargate-driver-debian:latest`).
@@ -277,7 +277,7 @@ to the container image that you are going to use for your CI builds.
       Use the region and account-id noted previously. For example, if your `Cluster ARN` looked like 
       `arn:aws:ecs:eu-west-1:1234567890:cluster/fargate-test-cluster/`, then the value for `SSH_PUBLIC_KEY`
       should be `arn:aws:ssm:eu-west-1:1234567890:parameter/SSH_PUBLIC_KEY`.
-   1. Click `Add`
+   1. Click `Add`.
 1. Click `Create`.
 1. Click `View task definition`.
 
@@ -286,9 +286,9 @@ for detailed instructions on setting up and working with task definitions.
 
 ## Step 9: Update permissions of `ecsTaskExecutionRole` role
 
-1. Go to [https://console.aws.amazon.com/iam/home#/roles](https://console.aws.amazon.com/iam/home#/roles)
+1. Go to [https://console.aws.amazon.com/iam/home#/roles](https://console.aws.amazon.com/iam/home#/roles).
 1. Find `ecsTaskExecutionRole` using search and click this role.
-1. Click `Attach policies`
+1. Click `Attach policies`.
 1. Choose `AmazonSSMReadOnlyAccess`.
 1. Click `Attach policy`.
 
