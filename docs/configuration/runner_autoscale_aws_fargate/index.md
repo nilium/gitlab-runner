@@ -166,8 +166,8 @@ test:
        cleanup_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "cleanup"]
    ```
 
-   Note: This section in the `config.toml` will be created by the registration command, do not change it.
-   The other content sections in the `config.toml` file above is what you will need to add.
+   Note: The section of the `config.toml` file shown below will be created by the registration command, do not change it.
+   The other sections in the `config.toml` file above is what you will need to add.
 
    ```toml
    concurrent = 1
