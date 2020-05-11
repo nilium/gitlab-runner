@@ -53,6 +53,9 @@ race conditions detector:
     - .test-failures.*.txt.updated
     expire_in: 7d
   when: always
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
 
 check windows 1809 test failures:
   extends:

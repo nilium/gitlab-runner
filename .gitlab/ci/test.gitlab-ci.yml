@@ -142,6 +142,9 @@ unit test with race:
     when: always
     expire_in: 7d
   allow_failure: true
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
 
 windows 1809 tests:
   parallel: 8
