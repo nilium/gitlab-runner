@@ -300,34 +300,34 @@ func TestWriteUserScript(t *testing.T) {
 		expectErr         bool
 	}{
 		"no build steps, after script": {
-			common.Steps{},
-			"",
-			"",
-			common.BuildStageAfterScript,
-			func(*MockShellWriter) {},
-			true,
+			inputSteps:        common.Steps{},
+			prebuildScript:    "",
+			postBuildScript:   "",
+			buildStage:        common.BuildStageAfterScript,
+			setupExpectations: func(*MockShellWriter) {},
+			expectErr:         true,
 		},
 		"single script step": {
-			common.Steps{
+			inputSteps: common.Steps{
 				common.Step{
 					Name:   common.StepNameScript,
 					Script: common.StepScript{"echo hello"},
 				},
 			},
-			"",
-			"",
-			common.BuildStage("step_script"),
-			func(m *MockShellWriter) {
+			prebuildScript:  "",
+			postBuildScript: "",
+			buildStage:      common.BuildStage("step_script"),
+			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Notice", "$ %s", "echo hello").Once()
 				m.On("Line", "echo hello").Once()
 				m.On("CheckForErrors").Once()
 			},
-			false,
+			expectErr: false,
 		},
 		"prebuild, multiple script steps, stage release, postBuild": {
-			common.Steps{
+			inputSteps: common.Steps{
 				common.Step{
 					Name:   common.StepNameScript,
 					Script: common.StepScript{"echo script"},
@@ -341,10 +341,10 @@ func TestWriteUserScript(t *testing.T) {
 					Script: common.StepScript{"echo a11y"},
 				},
 			},
-			"echo prebuild",
-			"echo postbuild",
-			common.BuildStage("step_release"),
-			func(m *MockShellWriter) {
+			prebuildScript:  "echo prebuild",
+			postBuildScript: "echo postbuild",
+			buildStage:      common.BuildStage("step_release"),
+			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Notice", "$ %s", "echo prebuild").Once()
@@ -355,7 +355,7 @@ func TestWriteUserScript(t *testing.T) {
 				m.On("Line", "echo postbuild").Once()
 				m.On("CheckForErrors").Times(3)
 			},
-			false,
+			expectErr: false,
 		},
 	}
 
@@ -379,9 +379,9 @@ func TestWriteUserScript(t *testing.T) {
 			err := shell.writeUserScript(mockShellWriter, info, tc.buildStage)
 			if tc.expectErr {
 				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
+				return
 			}
+			require.NoError(t, err)
 		})
 	}
 }
