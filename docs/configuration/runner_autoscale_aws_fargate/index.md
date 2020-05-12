@@ -306,7 +306,7 @@ Your configuration should now be ready to use.
 
 ## Cleanup
 
-If you would like to perform a cleanup after testing custom executor with AWS Fargate, you will need to remove the following objects: 
+If you would like to perform a cleanup after testing custom executor with AWS Fargate, you will need to remove the following objects:
 
 - EC2 instance, key pair, IAM role and security group created at [step 4](#step-4-create-a-runner-manager-ec2-instance)
 - ECS Fargate cluster created at [step 7](#step-7-create-an-ecs-fargate-cluster)
