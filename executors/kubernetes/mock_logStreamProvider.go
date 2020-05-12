@@ -4,7 +4,6 @@ package kubernetes
 
 import (
 	io "io"
-	time "time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -14,27 +13,18 @@ type mockLogStreamProvider struct {
 	mock.Mock
 }
 
-// LogStream provides a mock function with given fields: since
-func (_m *mockLogStreamProvider) LogStream(since *time.Time) (io.ReadCloser, error) {
-	ret := _m.Called(since)
+// LogStream provides a mock function with given fields: lineIndex, output
+func (_m *mockLogStreamProvider) LogStream(lineIndex uint64, output io.Writer) error {
+	ret := _m.Called(lineIndex, output)
 
-	var r0 io.ReadCloser
-	if rf, ok := ret.Get(0).(func(*time.Time) io.ReadCloser); ok {
-		r0 = rf(since)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(uint64, io.Writer) error); ok {
+		r0 = rf(lineIndex, output)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(io.ReadCloser)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*time.Time) error); ok {
-		r1 = rf(since)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // String provides a mock function with given fields:
