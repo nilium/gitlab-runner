@@ -132,7 +132,7 @@ test:
 1. SSH into the EC2 instance that you created in the previous step,
    `ssh ubuntu@[ip_address] -i path/to/downloaded/key/file`. Note: you need to make
    sure that the key file for accessing the EC2 instance has the right permissions:
-   `chmod 400 path/to/downloaded/key/file`. After that, run the below-mentioned commands on this EC2 instance.
+   `chmod 400 path/to/downloaded/key/file`. After that, run the following commands on this EC2 instance.
 1. `sudo mkdir -p /opt/gitlab-runner/{metadata,builds,cache}`
 1. `curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash`
 1. `sudo apt install gitlab-runner`
