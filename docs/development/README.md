@@ -200,17 +200,3 @@ favorite editor. The source code can be found under the `$GOROOT`
 environment variable. We have a `RUNNER_SRC` environment variable which
 you can use to find out the full path so when using PowerShell,
 you can use `cd $Env:RUNNER_SRC`.
-
-## Troubleshooting
-
-### docker.go missing Asset symbol
-
-This error happens due to missing executors/docker/bindata.go file that is generated from docker prebuilts.
-Which is especially tricky on Windows.
-
-Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
-
-1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz> and save to `out/docker/prebuilt-x86_64.tar.xz`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz> and save to `out/docker/prebuilt-arm.tar.xz`
-1. Execute `make docker` or check the Makefile how this command looks like

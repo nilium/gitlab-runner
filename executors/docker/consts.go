@@ -5,7 +5,7 @@ import "time"
 const dockerLabelPrefix = "com.gitlab.gitlab-runner"
 
 const prebuiltImageName = "gitlab/gitlab-runner-helper"
-const prebuiltImageExtension = ".tar.xz"
+const prebuiltImageExtension = ".tar"
 
 const dockerCleanupTimeout = 5 * time.Minute
 

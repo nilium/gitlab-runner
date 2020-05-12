@@ -14,9 +14,9 @@
 # Tar files that we want to generate from the Docker file system, this is
 # genarlly used for linux based Dockerfiles.
 BASE_TAR_PATH := out/helper-images/prebuilt
-TAR += ${BASE_TAR_PATH}-x86_64.tar.xz
-TAR += ${BASE_TAR_PATH}-arm.tar.xz
-TAR += ${BASE_TAR_PATH}-arm64.tar.xz
+TAR += ${BASE_TAR_PATH}-x86_64.tar
+TAR += ${BASE_TAR_PATH}-arm.tar
+TAR += ${BASE_TAR_PATH}-arm64.tar
 
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
@@ -50,9 +50,6 @@ dockerfiles/build/binaries/gitlab-runner-helper.%: $(HELPER_GO_FILES) $(GOX)
 
 # PHONY command to help build the tar files for linux.
 helper-docker: $(TAR)
-
-out/helper-images/prebuilt-%.tar.xz: out/helper-images/prebuilt-%.tar
-	xz -f -9 $<
 
 out/helper-images/prebuilt-%.tar: dockerfiles/build/binaries/gitlab-runner-helper.%
 	@mkdir -p $$(dirname $@_)
