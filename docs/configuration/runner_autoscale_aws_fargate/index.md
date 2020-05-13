@@ -208,10 +208,12 @@ test:
    - Remember the value for `Cluster` - we will use it later as well as the `test-task`,
      the name of the `TaskDefinition` (`:1` is the revision number).
    - Choose your region. Take the `Subnet` value from the Runner Manager instance
-     details (search for `Subnet ID` value).
-   - Get the SecurityGroup ID from its details: find `Security groups` at Runner Manager instance
-     details page, click the security group you crated earlier and copy `Security group ID` from there.
-     Note - in a production setting,
+   - Get the SecurityGroup ID from its details:
+     1. Find `Security groups` on the Runner Manager instance details page
+     1. Click the security group you created earlier
+     1. Copy the `Security group ID`
+
+     In a production setting,
      you should follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using Security groups.
 
