@@ -259,9 +259,14 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 
 	script, err := GenerateShellScript(buildStage, *shell)
 	if errors.Is(err, ErrSkipBuildStage) {
-		b.Log().WithField("build_stage", buildStage).Debug("Skipping stage (nothing to do)")
-		return nil
+		if b.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
+			b.Log().WithField("build_stage", buildStage).Debug("Skipping stage (nothing to do)")
+			return nil
+		}
+
+		err = nil
 	}
+
 	if err != nil {
 		return err
 	}

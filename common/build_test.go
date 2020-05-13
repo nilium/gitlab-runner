@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
@@ -1153,6 +1154,45 @@ func TestStartBuild(t *testing.T) {
 			assert.Equal(t, test.expectedBuildDir, build.BuildDir)
 			assert.Equal(t, test.args.rootDir, build.RootDir)
 			assert.Equal(t, test.expectedCacheDir, build.CacheDir)
+		})
+	}
+}
+
+func TestSkipBuildStageFeatureFlag(t *testing.T) {
+	tests := map[string]JobVariables{
+		"skip no-op build stages": {
+			{Key: featureflags.SkipNoOpBuildStages, Value: "true"},
+		},
+		"don't skip no-op build stages": {
+			{Key: featureflags.SkipNoOpBuildStages, Value: "false"},
+		},
+	}
+
+	s := MockShell{}
+	s.On("GetName").Return("skip-build-stage-shell")
+	RegisterShell(&s)
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: tc,
+				},
+			}
+
+			e := &MockExecutor{}
+			defer e.AssertExpectations(t)
+
+			s.On("GenerateScript", mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
+			e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
+
+			if !build.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
+				e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
+			}
+
+			err := build.executeStage(context.Background(), BuildStageAfterScript, e)
+			assert.NoError(t, err)
 		})
 	}
 }

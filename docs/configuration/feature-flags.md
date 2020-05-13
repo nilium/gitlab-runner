@@ -41,6 +41,7 @@ The flags are defined in `./helpers/feature_flags/flags.go` file.
 |--------------|---------------|------------|--------------------|-------------|
 | `FF_NETWORK_PER_BUILD` | `false` | ✗ |  | Enables creation of a docker [network per build](../executors/docker.md#networking) with the docker executor |
 | `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` | `true` | ✗ |  | When set to `false` disables execution of remote Kubernetes commands through `exec` in favor of `attach` to solve problems like [#4119](https://gitlab.com/gitlab-org/gitlab-runner/issues/4119) |
+| `FF_SKIP_NOOP_BUILD_STAGES` | `true` | ✗ |  | When set to `false` all build stages are executed even if running them has no consequence |
 
 <!-- feature_flags_list_end -->
 
