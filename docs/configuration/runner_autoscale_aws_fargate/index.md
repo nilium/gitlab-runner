@@ -96,7 +96,7 @@ test:
 
 1. Go to [https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard](https://console.aws.amazon.com/ec2/v2/home#LaunchInstanceWizard).
 1. Select the Ubuntu Server 18.04 LTS AMI for the instance, the 64-bit (x86) version.
-Note that the name can be different depending on the AWS region selected.
+  The name can be different depending on the AWS region selected.
 1. Choose t2.micro instance size. Click `Next: Configure Instance Details`.
 1. Leave the number of instances as 1. We can leave the default chosen network and
    subnet. Let's also set the `Auto-assign Public IP` to **enabled**. We also need
