@@ -101,7 +101,7 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 		return err
 	}
 
-	defer trace.Fail(err, common.NoneFailure)
+	defer trace.Complete(err, common.NoneFailure)
 
 	err = newBuild.Run(config, trace)
 

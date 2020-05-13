@@ -448,7 +448,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
-	trace.On("Fail", thrownErr, ScriptFailure).Once()
+	trace.On("Complete", thrownErr, ScriptFailure).Once()
 
 	err = build.Run(&Config{}, trace)
 	require.IsType(t, &BuildError{}, err)
@@ -503,7 +503,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
-	trace.On("Fail", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
+	trace.On("Complete", mock.Anything, JobExecutionTimeout).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
 	}).Once()
 

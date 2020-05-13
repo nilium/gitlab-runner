@@ -13,8 +13,8 @@ type MockJobTrace struct {
 	mock.Mock
 }
 
-// Fail provides a mock function with given fields: err, failureReason
-func (_m *MockJobTrace) Fail(err error, failureReason JobFailureReason) {
+// Complete provides a mock function with given fields: err, failureReason
+func (_m *MockJobTrace) Complete(err error, failureReason JobFailureReason) {
 	_m.Called(err, failureReason)
 }
 

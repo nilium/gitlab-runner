@@ -29,7 +29,7 @@ func (s *Trace) SetMasked(values []string) {
 func (s *Trace) Success() {
 }
 
-func (s *Trace) Fail(err error, failureReason JobFailureReason) {
+func (s *Trace) Complete(err error, failureReason JobFailureReason) {
 }
 
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {

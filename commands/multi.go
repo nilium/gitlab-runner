@@ -470,9 +470,9 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 	defer func() {
 		if err != nil {
 			fmt.Fprintln(trace, err.Error())
-			trace.Fail(err, common.RunnerSystemFailure)
+			trace.Complete(err, common.RunnerSystemFailure)
 		} else {
-			trace.Fail(nil, common.NoneFailure)
+			trace.Complete(nil, common.NoneFailure)
 		}
 	}()
 

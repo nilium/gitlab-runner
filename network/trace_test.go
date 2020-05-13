@@ -56,7 +56,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 
 	b.start()
 	b.Success()
-	b.Fail(errors.New("test"), "script_failure")
+	b.Complete(errors.New("test"), "script_failure")
 }
 
 func TestJobAbort(t *testing.T) {

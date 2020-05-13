@@ -605,13 +605,13 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 			failureReason = ScriptFailure
 		}
 
-		trace.Fail(err, failureReason)
+		trace.Complete(err, failureReason)
 
 		return
 	}
 
 	logger.Errorln("Job failed (system failure):", err)
-	trace.Fail(err, RunnerSystemFailure)
+	trace.Complete(err, RunnerSystemFailure)
 }
 
 func (b *Build) CurrentExecutorStage() ExecutorStage {

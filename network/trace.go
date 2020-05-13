@@ -39,10 +39,10 @@ type clientJobTrace struct {
 }
 
 func (c *clientJobTrace) Success() {
-	c.Fail(nil, common.NoneFailure)
+	c.Complete(nil, common.NoneFailure)
 }
 
-func (c *clientJobTrace) Fail(err error, failureReason common.JobFailureReason) {
+func (c *clientJobTrace) Complete(err error, failureReason common.JobFailureReason) {
 	c.lock.Lock()
 
 	if c.state != common.Running {
