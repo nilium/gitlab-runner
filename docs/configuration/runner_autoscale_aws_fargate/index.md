@@ -168,7 +168,7 @@ test:
    ```
 
    Note: The section of the `config.toml` file shown below will be created by the registration command, do not change it.
-   The other sections in the `config.toml` file above is what you will need to add.
+   The other sections in the `config.toml` file above is what you need to add.
 
    ```toml
    concurrent = 1
