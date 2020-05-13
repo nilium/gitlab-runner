@@ -341,10 +341,10 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.executeStage(ctx, BuildStageUserScript, executor)
 
 		// Execute after script (after_script)
-		timeoutContext, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
+		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, AfterScriptTimeout)
 		defer timeoutCancel()
 
-		b.executeStage(timeoutContext, BuildStageAfterScript, executor)
+		b.executeStage(timeoutCtx, BuildStageAfterScript, executor)
 	}
 
 	// Execute post script (cache store, artifacts upload)
@@ -352,7 +352,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.executeStage(ctx, BuildStageArchiveCache, executor)
 	}
 
-	artifactUploadError := b.executeUploadArtifacts(ctx, err, executor)
+	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
 
 	// track job end and execute referees
 	endTime := time.Now()
@@ -364,7 +364,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	}
 
 	// Otherwise, use uploadError
-	return artifactUploadError
+	return artifactUploadErr
 }
 
 func (b *Build) createReferees(executor Executor) {
