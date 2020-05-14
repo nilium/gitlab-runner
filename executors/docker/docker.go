@@ -886,9 +886,11 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 	e.Debugln("Waiting for attach to finish", id, "...")
 	attachCh := make(chan error, 2)
 
+	logsDone := make(chan struct{})
 	// Copy any output to the build trace
 	go func() {
 		_, err := stdcopy.StdCopy(e.Trace, e.Trace, hijacked.Reader)
+		logsDone <- struct{}{}
 		if err != nil {
 			attachCh <- err
 		}
@@ -913,6 +915,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 		e.Debugln("Container", id, "finished with", err)
 
 	case err = <-waitCh:
+		<-logsDone
 		e.Debugln("Container", id, "finished with", err)
 	}
 	return

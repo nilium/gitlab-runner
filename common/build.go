@@ -290,7 +290,6 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageGetSources:               true,
 		BuildStageRestoreCache:             true,
 		BuildStageDownloadArtifacts:        true,
-		BuildStageUserScript:               false,
 		BuildStageAfterScript:              false,
 		BuildStageArchiveCache:             true,
 		BuildStageUploadOnFailureArtifacts: true,

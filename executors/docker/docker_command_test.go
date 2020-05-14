@@ -76,6 +76,93 @@ func TestDockerCommandSuccessRun(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandMultipleSteps(t *testing.T) {
+	if helpers.SkipIntegrationTests(t, "docker", "info") {
+		return
+	}
+
+	tests := map[string]struct {
+		additionalSteps []common.Step
+		expectedOutput  []string
+		errExpected     bool
+	}{
+		"Successful build with release and after_script step": {
+			additionalSteps: []common.Step{
+				{
+					Name:         "release",
+					Script:       []string{"echo Release"},
+					Timeout:      120,
+					When:         "on_success",
+					AllowFailure: false,
+				},
+				{
+					Name:         "after_script",
+					Script:       []string{"echo After Script"},
+					Timeout:      120,
+					When:         "always",
+					AllowFailure: true,
+				},
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure on release step. After script runs.": {
+			additionalSteps: []common.Step{
+				{
+					Name: "release",
+					Script: []string{
+						"echo Release",
+						"exit 1",
+					},
+					Timeout:      120,
+					When:         "on_success",
+					AllowFailure: false,
+				},
+				{
+					Name:         "after_script",
+					Script:       []string{"echo After Script"},
+					Timeout:      120,
+					When:         "always",
+					AllowFailure: true,
+				},
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+
+			build.Steps = append(build.Steps, tt.additionalSteps...)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+
+			out := buf.String()
+			for _, output := range tt.expectedOutput {
+				assert.Contains(t, out, output)
+			}
+
+			if tt.errExpected {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+
+}
+
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {
 	executor := "docker"
 	image := common.TestAlpineImage

@@ -126,7 +126,7 @@ func TestBuildWithMultipleSteps(t *testing.T) {
 		expectedOutput  []string
 		errExpected     bool
 	}{
-		"Successful build with release step": {
+		"Successful build with release and after_script step": {
 			additionalSteps: []common.Step{
 				{
 					Name:         "release",
@@ -135,14 +135,22 @@ func TestBuildWithMultipleSteps(t *testing.T) {
 					When:         "on_success",
 					AllowFailure: false,
 				},
+				{
+					Name:         "after_script",
+					Script:       []string{"echo After Script"},
+					Timeout:      120,
+					When:         "always",
+					AllowFailure: true,
+				},
 			},
 			expectedOutput: []string{
 				"echo Hello World",
 				"echo Release",
+				"echo After Script",
 			},
 			errExpected: false,
 		},
-		"Failure on release step": {
+		"Failure on release step. After script runs.": {
 			additionalSteps: []common.Step{
 				{
 					Name: "release",
@@ -154,10 +162,18 @@ func TestBuildWithMultipleSteps(t *testing.T) {
 					When:         "on_success",
 					AllowFailure: false,
 				},
+				{
+					Name:         "after_script",
+					Script:       []string{"echo After Script"},
+					Timeout:      120,
+					When:         "always",
+					AllowFailure: true,
+				},
 			},
 			expectedOutput: []string{
 				"echo Hello World",
 				"echo Release",
+				"echo After Script",
 			},
 			errExpected: true,
 		},
