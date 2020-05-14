@@ -206,7 +206,7 @@ test:
    ```
 
    - Remember the value for `Cluster`, as well as the the name of the `TaskDefinition` (for example `test-task`
-     with `:1` as the revision number).
+     with `:1` as the revision number). If a revision is not specified, the latest ACTIVE revision is used.
    - Choose your region. Take the `Subnet` value from the Runner Manager instance
    - Get the SecurityGroup ID from its details:
      1. Find `Security groups` on the Runner Manager instance details page
