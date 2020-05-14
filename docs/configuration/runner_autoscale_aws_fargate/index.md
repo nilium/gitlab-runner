@@ -205,8 +205,8 @@ test:
      PrivateKeyPath = "/root/.ssh/id_rsa"
    ```
 
-   - Remember the value for `Cluster` - we will use it later as well as the `test-task`,
-     the name of the `TaskDefinition` (`:1` is the revision number).
+   - Remember the value for `Cluster`, as well as the the name of the `TaskDefinition` (for example `test-task`
+     with `:1` as the revision number).
    - Choose your region. Take the `Subnet` value from the Runner Manager instance
    - Get the SecurityGroup ID from its details:
      1. Find `Security groups` on the Runner Manager instance details page
