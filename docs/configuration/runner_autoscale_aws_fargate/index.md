@@ -100,7 +100,7 @@ test:
 1. Leave the number of instances as 1. We can leave the default chosen network and
    subnet. Let's also set the `Auto-assign Public IP` to **enabled**. We also need
    to create the IAM role that this instance will use:
-   1. Click the `Create new IAM role` and a new window/tab will be opened:
+   1. Click the **Create new IAM role** and a new window/tab will be opened:
    1. Click `Create role` button.
    1. Choose `AWS service` type for the entity.
    1. Choose `Common use cases` -> `EC2` and click `Next: Permissions` button.
