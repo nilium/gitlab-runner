@@ -96,8 +96,8 @@ func init() {
 	}
 
 	DockerPrebuiltImagesPaths = []string{
-		filepath.Join(runnerFolder, "helper-images"),
 		filepath.Join(runnerFolder, "out/helper-images"),
+		filepath.Join(runnerFolder, "../helper-images"),
 	}
 }
 
