@@ -313,3 +313,4 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 - EC2 instance, key pair, IAM role and security group created at [step 4](#step-4-create-a-runner-manager-ec2-instance)
 - ECS Fargate cluster created at [step 7](#step-7-create-an-ecs-fargate-cluster)
 - ECS Task Definition created at [step 8](#step-8-create-an-ecs-task-definition)
+- `AmazonSSMReadOnlyAccess` policy from the role `ecsTaskExecutionRole` added at [step 9](#step-9-update-permissions-of-ecstaskexecutionrole-role)
