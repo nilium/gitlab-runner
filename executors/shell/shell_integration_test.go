@@ -120,6 +120,76 @@ func TestBuildSuccess(t *testing.T) {
 	})
 }
 
+func TestBuildWithMultipleSteps(t *testing.T) {
+	tests := map[string]struct {
+		additionalSteps []common.Step
+		expectedOutput  []string
+		errExpected     bool
+	}{
+		"Successful build with release step": {
+			additionalSteps: []common.Step{
+				{
+					Name:         "release",
+					Script:       []string{"echo Release"},
+					Timeout:      120,
+					When:         "on_success",
+					AllowFailure: false,
+				},
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+			},
+			errExpected: false,
+		},
+		"Failure on release step": {
+			additionalSteps: []common.Step{
+				{
+					Name: "release",
+					Script: []string{
+						"echo Release",
+						"exit 1",
+					},
+					Timeout:      120,
+					When:         "on_success",
+					AllowFailure: false,
+				},
+			},
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				successfulBuild, err := common.GetSuccessfulBuild()
+				assert.NoError(t, err)
+
+				successfulBuild.Steps = append(successfulBuild.Steps, tt.additionalSteps...)
+
+				build, cleanup := newBuild(t, successfulBuild, shell)
+				defer cleanup()
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+
+				for _, output := range tt.expectedOutput {
+					assert.Contains(t, out, output)
+				}
+
+				if tt.errExpected {
+					assert.Error(t, err)
+					return
+				}
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
+
 func TestRawVariableOutput(t *testing.T) {
 	tests := map[string]struct {
 		command string
