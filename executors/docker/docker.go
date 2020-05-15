@@ -915,9 +915,10 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 		e.Debugln("Container", id, "finished with", err)
 
 	case err = <-waitCh:
-		<-logsDone
 		e.Debugln("Container", id, "finished with", err)
 	}
+
+	<-logsDone
 	return
 }
 
