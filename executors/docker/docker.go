@@ -876,7 +876,7 @@ func (e *executor) watchContainer(ctx context.Context, id string, input io.Reade
 		e.Debugln("Container", id, "finished with", err)
 	}
 
-	// By this time the container is either killed or finished.
+	// By this point the container is either killed or finished.
 	// Wait for logs to finish copying to the job trace.
 	<-logsDone
 

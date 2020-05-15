@@ -123,32 +123,6 @@ func getWindowsImage(t *testing.T) string {
 	return windowsImage
 }
 
-func TestDockerCommandWithAfterScriptSuccess(t *testing.T) {
-	if helpers.SkipIntegrationTests(t, "docker", "info") {
-		return
-	}
-
-	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-
-	build.Steps = append(build.Steps, common.Step{
-		Name:         "after_script",
-		Script:       []string{"echo After Script"},
-		Timeout:      120,
-		When:         "always",
-		AllowFailure: true,
-	})
-
-	var buf bytes.Buffer
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
-
-	assert.NoError(t, err)
-
-	out := buf.String()
-
-	assert.Contains(t, out, "echo Hello World")
-	assert.Contains(t, out, "echo After Script")
-}
-
 func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
