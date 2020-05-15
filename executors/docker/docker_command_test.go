@@ -123,7 +123,7 @@ func getWindowsImage(t *testing.T) string {
 	return windowsImage
 }
 
-func TestDockerCommandWithAfterScriptSucess(t *testing.T) {
+func TestDockerCommandWithAfterScriptSuccess(t *testing.T) {
 	if helpers.SkipIntegrationTests(t, "docker", "info") {
 		return
 	}
