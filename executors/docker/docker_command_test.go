@@ -160,7 +160,6 @@ func TestDockerCommandMultipleSteps(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
-
 }
 
 func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) common.Build {

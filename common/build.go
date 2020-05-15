@@ -357,6 +357,9 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 				continue
 			}
 			err = b.executeStage(ctx, StepToBuildStage(s), executor)
+			if err != nil {
+				break
+			}
 		}
 
 		// Execute after script (after_script)
